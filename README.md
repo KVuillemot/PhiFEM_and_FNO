@@ -1,4 +1,4 @@
-# PhiFEM_and_FNO
+# Deep physics with varying geometry : a $\phi$-FEM approach
 
 This repository contains all codes to reproduce results of the paper "Deep physics with varying geometry : a $\phi$-FEM approach", collaboration with Michel Duprez, Vanessa Lleras, Alexei Lozinski and Vincent Vigon. 
 
