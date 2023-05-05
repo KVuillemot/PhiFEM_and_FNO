@@ -357,7 +357,7 @@ def generate_manual_new_data_numpy(phi, F, dtype=tf.float32):
     Fxx = tf.cumsum(Fx, axis=1) / nb_vert
     Fyy = tf.cumsum(Fy, axis=2) / nb_vert
 
-    X = tf.stack([F, phi, Fx, Fy, Fxx, Fyy, domain, boundary], axis=3)
+    X = tf.stack([F, phi, Fx, Fy, Fxx, Fyy, domain], axis=3)
     return X
 
 

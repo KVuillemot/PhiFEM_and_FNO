@@ -133,7 +133,7 @@ class DataLoader:
         Fxx = tf.cumsum(Fx, axis=1) / nb_vert
         Fyy = tf.cumsum(Fy, axis=2) / nb_vert
 
-        X = tf.stack([F, Phi, G, Fx, Fy, Fxx, Fyy, domain, boundary], axis=3)
+        X = tf.stack([F, Phi, G, Fx, Fy, Fxx, Fyy, domain], axis=3)
         self.input_shape = (None, X.shape[1], X.shape[2], X.shape[3])
 
         nb_val = data_size // 8
@@ -161,12 +161,10 @@ class DataLoader:
         Phi = X[:, :, :, 1]
         G = X[:, :, :, 2]
         W = Y[:, :, :, 0]
-        domain = X[:, :, :, -2]
-        boundary = X[:, :, :, -1]
+        domain = X[:, :, :, -1]
         laplacian = laplacian_fn(Phi * W + G)
         nb_vert = np.shape(Phi)[1]
         domain_prop = tf.reduce_sum(domain, axis=[1, 2]) / nb_vert**2
-        boundary_prop = tf.reduce_sum(boundary, axis=[1, 2]) / nb_vert**2
 
         error = tf.reduce_sum(
             ((laplacian + F) * domain / (domain_prop[:, None, None])) ** 2,
@@ -544,7 +542,7 @@ class Agent:
             Y_pred,
             self.data.X_val[:, :, :, 1],
             level=2,
-            domain=self.data.X_val[:, :, :, -2],
+            domain=self.data.X_val[:, :, :, -1],
         )
         residues_interior = self.data.compute_residues(self.data.X_val, Y_pred)
         return (
@@ -584,7 +582,7 @@ class Agent:
             with tf.GradientTape() as tape:
                 y_pred = self.model.call(X_)
                 misfit_0, misfit_1, misfit_2 = self.H_loss(
-                    Y_, y_pred, X_[:, :, :, 1], level, X_[:, :, :, -2]
+                    Y_, y_pred, X_[:, :, :, 1], level, X_[:, :, :, -1]
                 )
                 if level == 0:
                     misfit = misfit_0
@@ -646,7 +644,7 @@ class Agent:
             with tf.GradientTape(persistent=True) as tape:
                 y_pred = self.model.call(X_)
                 misfit_0, misfit_1, misfit_2 = self.H_loss(
-                    Y_, y_pred, X_[:, :, :, 1], level, X_[:, :, :, -2]
+                    Y_, y_pred, X_[:, :, :, 1], level, X_[:, :, :, -1]
                 )
                 if level == 0:
                     misfit = misfit_0
@@ -829,8 +827,8 @@ class Agent:
         U_fe = Y_val[:, :, :, 0] * X_val[:, :, :, 1] + X_val[:, :, :, 2]
         U_pi = Y_pred[:, :, :, 0] * X_val[:, :, :, 1] + X_val[:, :, :, 2]
 
-        plot_laplacian(F, U_fe, U_pi, X_val[:, :, :, -2])
-        plot_results(U_fe, U_pi, X_val[:, :, :, -2])
+        plot_laplacian(F, U_fe, U_pi, X_val[:, :, :, -1])
+        plot_results(U_fe, U_pi, X_val[:, :, :, -1])
 
 
 def plot_results(U_fe, U_pi, domain):
