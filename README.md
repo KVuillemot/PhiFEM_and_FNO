@@ -44,11 +44,13 @@ If the result of nvidia-smi is not Cuda 11.7, you can either install another dri
 For that, use the following for Cuda $<$ 12.0 (see \[[tensorflow](https://www.tensorflow.org/install/pip?hl=fr)]) : 
 
 ```bash 
-conda create --name envname python=3.9 
+conda create --name envname python=3.8.10
 source activate envname 
 conda install -c conda-forge fenics mshr 
+conda install -c conda-forge superlu_dist=6.2.0
+pip3 install mpi4py==3.0.3 --no-binary mpi4py --user --force --no-cache-dir
 conda install -c conda-forge cudatoolkit=result_nvidia-smi 
-pip install nvidia-cudnn-cu11=8.6.0.163
+pip install nvidia-cudnn-cu11==8.6.0.163
 mkdir -p $CONDA_PREFIX/etc/conda/activate.d
 echo 'CUDNN_PATH=$(dirname $(python -c "import nvidia.cudnn;print(nvidia.cudnn.__file__)"))' >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
 echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/:$CUDNN_PATH/lib' >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
