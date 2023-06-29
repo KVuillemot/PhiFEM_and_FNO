@@ -4,9 +4,8 @@ This repository contains all codes to reproduce results of the paper "Deep physi
 
 Each folder correspond to one test case of the paper. 
 
-- `Dirichlet_homogeneous` contains the codes for the first test case : Poisson equation with homogeneous Dirichlet boundary conditions on random parameterized ellipses,
-- `Dirichlet_non_homogeneous`, the codes for the second test case : Poisson equation with non-homogeneous Dirichlet boundary conditions on random parameterized ellipses,
-- `Random_shapes`, the codes the third test case : Poisson equation with homogeneous Dirichlet boundary conditions, on non-parametric random shapes. 
+- `Ellipses`, the codes for the first test case : Poisson equation with non-homogeneous Dirichlet boundary conditions on random parameterized ellipses,
+- `Random_shapes`, the codes the third test case : Poisson equation with non-homogeneous Dirichlet boundary conditions, on non-parametric random shapes. 
 
 They are all composed of the same files : 
 - `compare_methods.ipynb` : a notebook containing the codes to compare the results of a trained operator, a standard finite element method and $\phi$-FEM; 
@@ -19,7 +18,7 @@ They are all composed of the same files :
 - `utils.py` : file containing severall utils functions;
 
 Moreover, for the first test case, you will find the file `change_size_images.ipynb`, used to compare results for different sizes of input of the FNO.
-Finally, for the third test case, you can find the file `domain_generator.py`, used to generate random shapes and level-set functions. 
+Finally, for the second test case, you can find the file `domain_generator.py`, used to generate random shapes and level-set functions. 
 
 In addition, each folder contains a dataset and pretrained operators.
 
@@ -57,5 +56,9 @@ echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/:$CUDNN_PATH/lib
 pip install tensorflow==2.12.*
 pip install numpy matplotlib seaborn pandas vedo 
 ```
+
+
+Finally, if you want to run generate new shapes using level-set functions and compute the error of the FNO prediction, you will need to perform few more installations to create standard meshes. These installations are detailled in the file `install_mmg.pdf`. 
+
 
 Remark : note that some of the codes need many ressources to be used. In particular, the file `./Random_shapes/compare_methods.ipynb` needs approximately 30Gb of memory and takes a long time to run.
