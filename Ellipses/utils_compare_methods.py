@@ -33,7 +33,7 @@ from prepare_data import (
 from dolfin import *
 from matplotlib.patches import Ellipse
 import matplotlib.transforms as transforms
-from prepare_data import rotate, outside_ball
+from prepare_data import rotate, outside_ball, eval_phi
 
 parameters["ghost_mode"] = "shared_facet"
 parameters["form_compiler"]["cpp_optimize"] = True
