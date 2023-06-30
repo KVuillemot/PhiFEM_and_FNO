@@ -33,7 +33,7 @@ from prepare_data import (
 from dolfin import *
 from matplotlib.patches import Ellipse
 import matplotlib.transforms as transforms
-
+from prepare_data import rotate, outside_ball
 
 parameters["ghost_mode"] = "shared_facet"
 parameters["form_compiler"]["cpp_optimize"] = True
@@ -112,73 +112,91 @@ class GExpr(MyUserExpression):
         value[0] = call_G(df, x, self.alpha, self.beta)
 
 
-def compute_standard_fem(nb_vert, param, exact_fem=False):
-    mu0, mu1, sigma, x_0, y_0, lx, ly, theta, alpha, beta = param
-    print(f"(mu0, mu1, sigma, x_0, y_0, lx, ly, theta, alpha, beta) = {param}")
-    domain = mshr.CSGRotation(
-        mshr.Ellipse(df.Point(x_0, y_0), lx, ly), df.Point(x_0, y_0), theta
-    )  # warning with theta : degree ? Radians ? Conversion ?
+class StandardFEMSolver:
+    def __init__(self, params):
+        self.params = params
 
-    # construction of the mesh
-    if exact_fem:
-        H = 50
-        mesh = mshr.generate_mesh(domain, H)
-        h = mesh.hmax()
-        while h > 0.002767:
-            H += 20
+    def solve_one(self, i, size, reference_fem=False):
+        mu0, mu1, sigma, x_0, y_0, lx, ly, theta, alpha, beta = self.params[i]
+        print(
+            f"(mu0, mu1, sigma, x_0, y_0, lx, ly, theta, alpha, beta) = {self.params[i]}"
+        )
+        domain = mshr.CSGRotation(
+            mshr.Ellipse(df.Point(x_0, y_0), lx, ly), df.Point(x_0, y_0), theta
+        )
+
+        # construction of the mesh
+        if reference_fem:
+            H = 50
             mesh = mshr.generate_mesh(domain, H)
             h = mesh.hmax()
+            while h > 0.002767:
+                H += 20
+                mesh = mshr.generate_mesh(domain, H)
+                h = mesh.hmax()
 
-    else:
-        mesh_macro = df.UnitSquareMesh(nb_vert - 1, nb_vert - 1)
-        h_macro = mesh_macro.hmax()
-        H = 3
-        start = time.time()
-        mesh = mshr.generate_mesh(domain, H)
-        end = time.time()
-        construction_time = end - start
-
-        h = mesh.hmax()
-        while h > h_macro:
-            H += 1
+        else:
+            mesh_macro = df.UnitSquareMesh(size - 1, size - 1)
+            h_macro = mesh_macro.hmax()
+            H = 3
             start = time.time()
             mesh = mshr.generate_mesh(domain, H)
             end = time.time()
             construction_time = end - start
+
             h = mesh.hmax()
+            while h > h_macro:
+                H += 1
+                start = time.time()
+                mesh = mshr.generate_mesh(domain, H)
+                end = time.time()
+                construction_time = end - start
+                h = mesh.hmax()
 
-    # FunctionSpace Pk
-    V = df.FunctionSpace(mesh, "CG", degV)
-    boundary = "on_boundary"
+        # FunctionSpace Pk
+        V = df.FunctionSpace(mesh, "CG", degV)
+        boundary = "on_boundary"
 
-    f = FExpr(mu0, mu1, sigma, degree=degV + 2, domain=mesh)
-    u_D = GExpr(alpha, beta, degree=degV + 2, domain=mesh)
-    bc = df.DirichletBC(V, u_D, boundary)
+        f = FExpr(mu0, mu1, sigma, degree=degV + 2, domain=mesh)
+        u_D = GExpr(alpha, beta, degree=degV + 2, domain=mesh)
 
-    v = df.TestFunction(V)
-    u = df.TrialFunction(V)
-    dx = df.Measure("dx", domain=mesh)
-    # Resolution of the variationnal problem
-    a = df.inner(df.grad(u), df.grad(v)) * dx
-    l = f * v * dx
+        bc = df.DirichletBC(V, u_D, boundary)
 
-    u = df.Function(V)
-    start = time.time()
-    solve(a == l, u, bcs=bc)
-    end = time.time()
-    resolution_time = end - start
-    u_h = u
-    if exact_fem:
-        return (
-            df.project(
-                u_h,
-                V,  # , solver_type="gmres", preconditioner_type="hypre_amg"
-            ),
-            V,
-            dx,
+        v = df.TestFunction(V)
+        u = df.TrialFunction(V)
+        dx = df.Measure("dx", domain=mesh)
+        # Resolution of the variationnal problem
+        a = df.inner(df.grad(u), df.grad(v)) * dx
+        l = f * v * dx
+
+        u = df.Function(V)
+        start = time.time()
+        solve(
+            a == l,
+            u,
+            bcs=bc,
         )
-    else:
-        return df.project(u_h, V), construction_time, resolution_time
+        end = time.time()
+        resolution_time = end - start
+        u_h = u
+        if reference_fem:
+            return (
+                df.project(
+                    u_h,
+                    V,
+                    solver_type="gmres",
+                    preconditioner_type="hypre_amg",
+                ),
+                V,
+                dx,
+            )
+        else:
+            return (
+                df.project(u_h, V),
+                mesh.hmax(),
+                construction_time,
+                resolution_time,
+            )
 
 
 # parameter of the ghost penalty
@@ -206,9 +224,9 @@ class PhiFemSolver_error:
         return expr
 
     def solve_one(self, i):
-        mu0, mu1, sigma, x_0, y_0, lx, ly, theta, alpha, beta = self.params
+        mu0, mu1, sigma, x_0, y_0, lx, ly, theta, alpha, beta = self.params[i]
         print(
-            f"(mu0, mu1, sigma, x_0, y_0, lx, ly, theta, alpha, beta) = {self.params}"
+            f"(mu0, mu1, sigma, x_0, y_0, lx, ly, theta, alpha, beta) = {self.params[i]}"
         )
 
         domains = MeshFunction(
@@ -329,6 +347,8 @@ class PhiFemSolver_error:
         return (
             df.project(phi * u_h + g_expr, V),
             V,
+            dx,
+            mesh.hmax(),
             cell_selection,
             submesh_construction,
             ghost_cell_selection,
@@ -404,6 +424,84 @@ def confidence_ellipse(x, y, ax, n_std=3.0, facecolor="none", **kwargs):
 
     ellipse.set_transform(transf + ax.transData)
     return ax.add_patch(ellipse)
+
+
+def new_create_FG_numpy(nb_data, nb_vert):
+    xy = np.linspace(0.0, 1.0, nb_vert)
+    XX, YY = np.meshgrid(xy, xy)
+    XX = np.reshape(XX, [-1])
+    YY = np.reshape(YY, [-1])
+    XXYY = np.stack([XX, YY])
+
+    mu0 = np.random.uniform(0.2, 0.8, size=[nb_data, 1])
+    mu1 = np.random.uniform(0.2, 0.8, size=[nb_data, 1])
+    sigma = np.random.uniform(0.15, 0.45, size=[nb_data, 1])
+
+    alpha = np.random.uniform(-0.8, 0.8, size=[nb_data, 1])
+    beta = np.random.uniform(-0.8, 0.8, size=[nb_data, 1])
+
+    x_0 = np.random.uniform(0.2, 0.8, size=[nb_data, 1])
+    y_0 = np.random.uniform(0.2, 0.8, size=[nb_data, 1])
+    lx = np.random.uniform(0.2, 0.45, size=[nb_data, 1])
+    ly = np.random.uniform(0.2, 0.45, size=[nb_data, 1])
+    theta = np.random.uniform(0.0, 0.6, size=[nb_data, 1])
+    check_data = 0
+    for n in range(nb_data):
+        new_generation = 0
+        xx_0, yy_0, llx, lly = x_0[n][0], y_0[n][0], lx[n][0], ly[n][0]
+        xx0_llxp = rotate([xx_0, yy_0], [xx_0 + llx, yy_0], theta[n])
+        xx0_llxm = rotate([xx_0, yy_0], [xx_0 - llx, yy_0], theta[n])
+        yy0_llyp = rotate([xx_0, yy_0], [xx_0, yy_0 + lly], theta[n])
+        yy0_llym = rotate([xx_0, yy_0], [xx_0, yy_0 - lly], theta[n])
+        while (
+            (outside_ball(xx0_llxp))
+            or (outside_ball(xx0_llxm))
+            or (outside_ball(yy0_llyp))
+            or (outside_ball(yy0_llym))
+        ):
+            x_0[n][0] = np.random.uniform(0.2, 0.8, size=[1, 1])[0]
+            y_0[n][0] = np.random.uniform(0.2, 0.8, size=[1, 1])[0]
+            lx[n][0] = np.random.uniform(0.2, 0.45, size=[1, 1])[0]
+            ly[n][0] = np.random.uniform(0.2, 0.45, size=[1, 1])[0]
+            xx_0, yy_0, llx, lly = x_0[n][0], y_0[n][0], lx[n][0], ly[n][0]
+            xx0_llxp = rotate([xx_0, yy_0], [xx_0 + llx, yy_0], theta[n])
+            xx0_llxm = rotate([xx_0, yy_0], [xx_0 - llx, yy_0], theta[n])
+            yy0_llyp = rotate([xx_0, yy_0], [xx_0, yy_0 + lly], theta[n])
+            yy0_llym = rotate([xx_0, yy_0], [xx_0, yy_0 - lly], theta[n])
+            new_generation += 1
+        check_data += 1
+
+    for n in range(nb_data):
+        new_generation = 0
+        xx_0, yy_0, llx, lly, ttheta = (
+            x_0[n][0],
+            y_0[n][0],
+            lx[n][0],
+            ly[n][0],
+            theta[n][0],
+        )
+        mmu0, mmu1 = mu0[n][0], mu1[n][0]
+        sigma[n][0] = np.random.uniform(min(llx, lly) / 2.0, max(llx, lly))
+        while eval_phi(np, mmu0, mmu1, xx_0, yy_0, llx, lly, ttheta) > -0.15:
+            mu0[n][0] = np.random.uniform(0.2, 0.8, size=[1, 1])[0]
+            mu1[n][0] = np.random.uniform(0.2, 0.8, size=[1, 1])[0]
+            mmu0, mmu1 = mu0[n][0], mu1[n][0]
+
+        check_data += 1
+
+    F = call_F(np, XXYY, mu0, mu1, sigma)
+    F = np.reshape(F, [nb_data, nb_vert, nb_vert])
+
+    G = call_G(np, XXYY, alpha, beta)
+    G = np.reshape(G, [nb_data, nb_vert, nb_vert])
+
+    phi = call_phi(np, XXYY, x_0, y_0, lx, ly, theta)
+    phi = np.reshape(phi, [nb_data, nb_vert, nb_vert])
+
+    params = np.concatenate(
+        [mu0, mu1, sigma, x_0, y_0, lx, ly, theta, alpha, beta], axis=1
+    )
+    return F, phi, G, params
 
 
 if __name__ == "__main__":

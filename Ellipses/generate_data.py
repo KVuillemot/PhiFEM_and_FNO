@@ -67,8 +67,7 @@ class MyUserExpression(BaseExpression):
         cell = domain.ufl_cell()
         element = _select_element(
             family=None, cell=cell, degree=degree, value_shape=()
-        )  # modifier value_shape si Expression non scalaire
-
+        )
         self._cpp_object = _InterfaceExpression(self, ())
 
         BaseExpression.__init__(
@@ -246,7 +245,6 @@ class PhiFemSolver:
             * jump(grad(phi * v), n)
             * dS(1)
         )
-        # Define solution function
         w_h = Function(V)
         solve(a == L, w_h)
         return self.make_matrix(w_h)

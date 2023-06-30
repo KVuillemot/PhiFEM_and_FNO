@@ -45,9 +45,9 @@ def test_domain_and_border():
     domain, boundary = domain_and_border(np.shape(phi)[0], phi)
     plt.figure(figsize=(6, 12))
     plt.subplot(1, 2, 1)
-    plt.imshow(domain, cmap=my_cmap)
+    plt.imshow(domain, cmap=my_cmap, origin="lower")
     plt.subplot(1, 2, 2)
-    plt.imshow(boundary, cmap=my_cmap)
+    plt.imshow(boundary, cmap=my_cmap, origin="lower")
     plt.tight_layout()
     plt.show()
 
@@ -61,23 +61,23 @@ def test_data():
     domain, boundary = domain_and_border(np.shape(phi)[0], phi)
     plt.figure(figsize=(9, 6))
     plt.subplot(2, 3, 1)
-    plt.imshow(domain, cmap=my_cmap)
+    plt.imshow(domain, cmap=my_cmap, origin="lower")
     plt.subplot(2, 3, 2)
-    plt.imshow(boundary, cmap=my_cmap)
+    plt.imshow(boundary, cmap=my_cmap, origin="lower")
     plt.subplot(2, 3, 3)
-    plt.imshow(F * domain, cmap=my_cmap)
+    plt.imshow(F * domain, cmap=my_cmap, origin="lower")
     plt.colorbar(shrink=0.6)
     plt.title("F")
     plt.subplot(2, 3, 4)
-    plt.imshow(G * domain, cmap=my_cmap)
+    plt.imshow(G * domain, cmap=my_cmap, origin="lower")
     plt.colorbar(shrink=0.6)
     plt.title("G")
     plt.subplot(2, 3, 5)
-    plt.imshow(W * domain, cmap=my_cmap)
+    plt.imshow(W * domain, cmap=my_cmap, origin="lower")
     plt.colorbar(shrink=0.6)
     plt.title("W")
     plt.subplot(2, 3, 6)
-    plt.imshow((W * phi + G) * domain, cmap=my_cmap)
+    plt.imshow((W * phi + G) * domain, cmap=my_cmap, origin="lower")
     plt.colorbar(shrink=0.6)
     plt.title("U")
     plt.tight_layout()
@@ -127,7 +127,6 @@ class DataLoader:
             boundary, dtype=dtype
         )
 
-        # enrichissement des données
         Fx = tf.cumsum(F, axis=1) / nb_vert
         Fy = tf.cumsum(F, axis=2) / nb_vert
         Fxx = tf.cumsum(Fx, axis=1) / nb_vert
@@ -156,7 +155,6 @@ class DataLoader:
         self.residues_interior_val = (residues_interior,)
 
     def compute_residues(self, X, Y):
-        # F = X[:, 1:-1, 1:-1, 0]
         F = X[:, :, :, 0] * self.max_norm_F
         Phi = X[:, :, :, 1]
         G = X[:, :, :, 2]
@@ -219,17 +217,10 @@ class SpectralConv2d(tf.keras.layers.Layer):
         return tf.einsum("bixy,ioxy->boxy", inputs, weights)
 
     def call(self, A):
-        # on met les 2 axes d'espace en dernier, car rfft2d agit sur les 2 derniers axies
         A = tf.transpose(A, [0, 3, 1, 2])
 
         # Compute Fourier coeffcients
         A_ft = tf.signal.rfft2d(A)  # shape=(...,A.shape[-2],A.shape[-1]//2+1)
-
-        """
-        Attention au rfft
-        [1,1,n1,10]=> [1,1,n1,6]
-        [1,1,n1,9]=>  [1,1,n1,5]
-        """
 
         # Multiply relevant Fourier modes
         out_ft_corner_SO = self.channel_mix(
@@ -259,11 +250,9 @@ class SpectralConv2d(tf.keras.layers.Layer):
         )
         out_ft = out_ft_corner_SO + out_ft_corner_NO
         # Return to physical space
-        A = tf.signal.irfft2d(
-            out_ft, fft_length=[A.shape[2], A.shape[3]]
-        )  # fft_length=
+        A = tf.signal.irfft2d(out_ft, fft_length=[A.shape[2], A.shape[3]])
 
-        # on remet l'axe des channel en dernier
+        # channel axis goes back at the end
         A = tf.transpose(A, [0, 2, 3, 1])
 
         return A
@@ -277,7 +266,7 @@ class FNO2d(tf.keras.Model):
         self.modes2 = modes
         self.width = width
 
-        self.pad_prop = pad_prop  # on peut mettre à zéro si les inputs et les outputs sont périodiques
+        self.pad_prop = pad_prop
 
         print(
             f"modèle FNO2d crée avec comme hyperparamètre: modes:{modes}, width:{width}, pad_prop:{self.pad_prop} "
@@ -296,7 +285,6 @@ class FNO2d(tf.keras.Model):
             tf.keras.layers.Conv2D(self.width, 1, padding="SAME")
             for _ in range(nb_layer)
         ]
-        # self.dwconv = tf.keras.layers.Conv2D(self.width,kernel_size=7, padding='same',activation="gelu") # depthwise conv
 
         self.fc1 = tf.keras.layers.Dense(128)
         self.fc2 = tf.keras.layers.Dense(1)
@@ -315,10 +303,9 @@ class FNO2d(tf.keras.Model):
             x2 = addi(A)
             A = x1 + x2
             if i != len(self.convs) - 1:
-                A = tf.nn.relu(A)  # avec gelu c'est plus lent et pas mieux
+                A = tf.nn.relu(A)
 
         A = A[:, pad_1:-pad_1, pad_2:-pad_2, :]
-        # A = self.dwconv(A)
         A = self.fc1(A)
         A = tf.nn.gelu(A)
         A = self.fc2(A)
@@ -335,7 +322,7 @@ def test_spectral_conv_2D():
     modes1 = 5
     modes2 = 6
 
-    nx = 10 * modes1 + 1  # doit être plus grand que modes
+    nx = 10 * modes1 + 1  # must be greater than modes
     ny = 5 * modes2
 
     spectral_conv = SpectralConv2d(in_channels, out_channels, modes1, modes2)
@@ -365,10 +352,9 @@ def test_FNO2d():
     print("X.shape", X.shape)
 
     model = FNO2d(modes, width_model)
-    # premier appel pour le traçage
-    print("premier appel")
+    print("first call")
     Y = model.call(X)
-    print("fin du premier appel")
+    print("end of first call")
 
     ti0 = time.time()
     for _ in range(10):
@@ -389,29 +375,11 @@ def test_FNO2d():
 
 class Agent:
     def __init__(self, data: DataLoader, small_model=False):
-        """
-
-        U_theta = FNO_theta(F,G)
-
-        min_theta  H2(U_fe - U_theta) sur tout le disque
-
-
-        Residu (U) = L2(Delta U - F) + L2(U - G)_bord
-
-        Je veux
-        min(Residu(U_theta))
-
-        Je dispose de U_fe tel que
-        Residu (U_fe) = 1e-5
-
-        Si je j'arrive H2(U_fe-U_theta) petite =>
-        """
-
         self.nb_vert = data.nb_vert
         self.data = data
 
         width = 20
-        # pour les tests locaux
+        # for local tests
         if small_model:
             width = 10
 
@@ -573,7 +541,7 @@ class Agent:
 
     @tf.function
     def validate(self):
-        print("traçage de la méthode validate")
+        print("validate method tracing")
         Y_pred = self.model.call(self.data.X_val)
         misfit_0, misfit_1, misfit_2 = self.H_loss(
             self.data.Y_val,
@@ -592,7 +560,7 @@ class Agent:
 
     @tf.function
     def finetune_with_residues_acc(self, X):
-        print("traçage de finetune_with_residues_acc")
+        print("tracing finetune_with_residues_acc")
         with tf.GradientTape(persistent=True) as tape:
             y_pred = self.model.call(X)
             residues_interior = self.data.compute_residues(X, y_pred)
@@ -607,7 +575,7 @@ class Agent:
         """
         X = [F, Phi,...]
         """
-        print(f"traçage de train_one_epoch_misfit_acc, level={level}")
+        print(f"tracing train_one_epoch_misfit_acc, level={level}")
 
         total_misfit_0 = 0
         total_misfit_1 = 0
@@ -645,7 +613,7 @@ class Agent:
 
     @tf.function
     def train_one_epoch_residues_acc(self, X, Y, batch_size, nb_batch):
-        print("traçage de train_one_epoch_residues_acc")
+        print("tracing train_one_epoch_residues_acc")
 
         total_residues_interior = 0
 
@@ -667,7 +635,7 @@ class Agent:
 
     @tf.function
     def train_one_epoch_both_acc(self, X, Y, batch_size, nb_batch, level):
-        print(f"traçage de train_one_epoch_both_acc, level={level}")
+        print(f"tracing train_one_epoch_both_acc, level={level}")
 
         total_misfit_0 = 0
         total_misfit_1 = 0
@@ -720,11 +688,7 @@ class Agent:
     def train(self, misfit_level, epochs):
         try:
             for i in range(epochs):
-                # programmation
                 optimize_misfit, optimize_residues = True, False
-                # if i>150:
-                #    optimize_misfit, optimize_residues = True, True
-                #
                 if optimize_misfit:
                     self.memo_optimize_misfit.append(i)
                 if optimize_residues:
@@ -751,10 +715,6 @@ class Agent:
                     )
                     self.memo_val_steps.append(i)
 
-                # if i > 0 and i % 60 == 0:
-                #     self.show_curves()
-                #     self.show_results()
-
                 if (i + 1) % 50 == 0 and i > 0:
                     nb_data = self.data.nb_data
                     if not (os.path.exists(f"./models_{nb_data}")):
@@ -764,7 +724,6 @@ class Agent:
                         f"./models_{nb_data}/model_{i+1}/model_weights"
                     )
                     self.show_curves(save=True, i=i + 1)
-                    # self.show_results()
 
         except KeyboardInterrupt:
             pass
@@ -775,7 +734,7 @@ class Agent:
         self, optimize_misfit, optimize_residues, misfit_level, i
     ):
         ti0 = time.time()
-        batch_size = 64  # plus lent avec 128
+        batch_size = 64
         nb_data = len(self.data.X_train)
         nb_batch = nb_data // batch_size
         if nb_batch == 0:
@@ -783,10 +742,8 @@ class Agent:
             nb_batch = 1
         if nb_batch <= 2:
             print(
-                f"Attention, nb_data={nb_data} est petit comparé au batchsize={batch_size}, donc le nombre de batch par epoch est de {nb_batch} "
+                f"Warning, nb_data={nb_data} is small compared to batchsize={batch_size}, the number of batch per epoch is {nb_batch} "
             )
-
-        # print("nb_data",len(self.data.X_train),"nb_batch",nb_batch)
 
         rand_i = tf.random.shuffle(range(len(self.data.X_train)))
         X = tf.gather(self.data.X_train, rand_i)
@@ -845,7 +802,7 @@ class Agent:
         plt.tight_layout()
         if save:
             plt.savefig(f"./models_{self.data.nb_data}/plots/misfits_{i}.png")
-        # plt.show()
+        plt.show()
 
         plt.figure(figsize=(8, 6))
         plt.plot(self.memo_residues_interior_train, "k", label="residues")
@@ -858,7 +815,7 @@ class Agent:
         plt.tight_layout()
         if save:
             plt.savefig(f"./models_{self.data.nb_data}/plots/residues_{i}.png")
-        # plt.show()
+        plt.show()
 
     def show_results(self):
         nb = 5
@@ -904,9 +861,15 @@ def plot_results(U_fe, U_pi, domain):
     for i in range(nb):
         for j in [0, 1, 2]:
             axs[i, j].axis("off")
-        im = axs[i, 0].imshow(U_fe_d[i], vmin=vmin, vmax=vmax, cmap=my_cmap)
-        axs[i, 1].imshow(U_pi_d[i], vmin=vmin, vmax=vmax, cmap=my_cmap)
-        axs[i, 2].imshow(delta[i], vmin=vmin, vmax=vmax, cmap=my_cmap)
+        im = axs[i, 0].imshow(
+            U_fe_d[i], vmin=vmin, vmax=vmax, cmap=my_cmap, origin="lower"
+        )
+        axs[i, 1].imshow(
+            U_pi_d[i], vmin=vmin, vmax=vmax, cmap=my_cmap, origin="lower"
+        )
+        axs[i, 2].imshow(
+            delta[i], vmin=vmin, vmax=vmax, cmap=my_cmap, origin="lower"
+        )
 
     axs[0, 0].set_title("U_fe")
     axs[0, 1].set_title("U_pi")
@@ -973,11 +936,15 @@ def plot_laplacian(F, U_fe, U_pi, domain):
     for i in range(nb):
         for j in [0, 1, 2]:
             axs[i, j].axis("off")
-        axs[i, 0].imshow(F_d[i], vmin=vmin, vmax=vmax, cmap=my_cmap)
-        im = axs[i, 1].imshow(
-            _deltaU_fe_d[i], vmin=vmin, vmax=vmax, cmap=my_cmap
+        axs[i, 0].imshow(
+            F_d[i], vmin=vmin, vmax=vmax, cmap=my_cmap, origin="lower"
         )
-        axs[i, 2].imshow(_deltaU_pi_d[i], vmin=vmin, vmax=vmax, cmap=my_cmap)
+        im = axs[i, 1].imshow(
+            _deltaU_fe_d[i], vmin=vmin, vmax=vmax, cmap=my_cmap, origin="lower"
+        )
+        axs[i, 2].imshow(
+            _deltaU_pi_d[i], vmin=vmin, vmax=vmax, cmap=my_cmap, origin="lower"
+        )
 
     axs[0, 0].set_title("F")
     axs[0, 1].set_title("-delta (U_fe)")
@@ -988,7 +955,3 @@ def plot_laplacian(F, U_fe, U_pi, domain):
     fig.colorbar(im, cax=cbar_ax)
 
     plt.show()
-
-
-if __name__ == "__main__":
-    print("test")

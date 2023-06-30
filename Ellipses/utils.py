@@ -21,7 +21,6 @@ from prepare_data import (
     call_F,
     call_Omega,
     call_phi,
-    eval_phi,
     call_G,
 )
 
@@ -34,7 +33,6 @@ def smooth_padding(W: tf.Tensor, pad_size):
         pad_left = pad_size
         pad_right = pad_size
 
-    # attention, on ne peut pas aller jusqu'à pad_left = W.shape[-1], certaines fonctions de padding font des slicing
     assert (
         pad_left < W.shape[-1] and pad_right < W.shape[-1]
     ), f"we must have pad_left < W.shape[-1] and pad_right < W.shape[-1]. Here:pad_left={pad_left},pad_right={pad_right} and W.shape[-1]={W.shape[-1]}"
@@ -137,7 +135,6 @@ class Derivator_fd:
 
         if previous_der is None:
             previous_der = self.one_symbol_rec(U, res, symbol[:-1])
-            # res[symbol[:-1]]=previous_der
 
         der = self.D_axis(previous_der, symbol[-1])
         res[symbol] = der
@@ -190,92 +187,6 @@ def convert_numpy_matrix_to_fenics(X, nb_vert, degree=2):
     X_FEniCS.vector()[mapping] = X.flatten()
 
     return X_FEniCS
-
-
-def compute_L2_error(y_true, y_pred, domain):
-    nb_vert = np.shape(y_true)[1]
-
-    if not (isinstance(y_true, np.ndarray)):
-        y_true = y_true.numpy()
-    if not (isinstance(y_pred, np.ndarray)):
-        y_pred = y_pred.numpy()
-
-    y_true = y_true * domain[:, :]
-    y_pred = y_pred * domain[:, :]
-    y_true = np.reshape(y_true, (nb_vert, nb_vert))
-    y_pred = np.reshape(y_pred, (nb_vert, nb_vert))
-
-    nb_vert = y_true.shape[1]
-    boxmesh = df.RectangleMesh(
-        df.Point(0.0, 0.0), df.Point(1.0, 1.0), nb_vert - 1, nb_vert - 1
-    )
-    V = df.FunctionSpace(boxmesh, "CG", 1)
-    v2d = df.vertex_to_dof_map(V)
-    y_true_FEniCS = df.Function(V)
-    y_true_FEniCS.vector()[v2d] = y_true.flatten()
-    y_pred_FEniCS = df.Function(V)
-    y_pred_FEniCS.vector()[v2d] = y_pred.flatten()
-
-    return (
-        df.assemble((((y_true_FEniCS - y_pred_FEniCS)) ** 2) * df.dx) ** (0.5)
-    ) / (df.assemble((((y_true_FEniCS)) ** 2) * df.dx) ** (0.5))
-
-
-def compute_H1_error(y_true, y_pred, domain):
-    nb_vert = np.shape(y_true)[1]
-    y_true = y_true * domain[:, :, None]
-    y_pred = y_pred * domain[:, :, None]
-    y_true = np.reshape(y_true.numpy(), (nb_vert, nb_vert))
-    y_pred = np.reshape(y_pred.numpy(), (nb_vert, nb_vert))
-
-    nb_vert = y_true.shape[1]
-    boxmesh = df.RectangleMesh(
-        df.Point(0.0, 0.0), df.Point(1.0, 1.0), nb_vert - 1, nb_vert - 1
-    )
-    V = df.FunctionSpace(boxmesh, "CG", 1)
-    v2d = df.vertex_to_dof_map(V)
-    y_true_FEniCS = df.Function(V)
-    y_true_FEniCS.vector()[v2d] = y_true.flatten()
-    y_pred_FEniCS = df.Function(V)
-    y_pred_FEniCS.vector()[v2d] = y_pred.flatten()
-    plt.figure()
-    plt.subplot(1, 2, 1)
-    df.plot(y_pred_FEniCS)
-    plt.subplot(1, 2, 2)
-    df.plot(y_true_FEniCS)
-    plt.show()
-    return (
-        df.assemble(((df.grad(y_true_FEniCS - y_pred_FEniCS)) ** 2) * df.dx)
-        ** (0.5)
-    ) / (df.assemble(((df.grad(y_true_FEniCS)) ** 2) * df.dx) ** (0.5))
-
-
-def compute_Linf_error(y_true, y_pred, domain):
-    nb_vert = np.shape(y_true)[1]
-
-    if not (isinstance(y_true, np.ndarray)):
-        y_true = y_true.numpy()
-    if not (isinstance(y_pred, np.ndarray)):
-        y_pred = y_pred.numpy()
-
-    y_true = y_true * domain[:, :]
-    y_pred = y_pred * domain[:, :]
-    y_true = np.reshape(y_true, (nb_vert, nb_vert))
-    y_pred = np.reshape(y_pred, (nb_vert, nb_vert))
-
-    nb_vert = y_true.shape[1]
-    boxmesh = df.RectangleMesh(
-        df.Point(0.0, 0.0), df.Point(1.0, 1.0), nb_vert - 1, nb_vert - 1
-    )
-    V = df.FunctionSpace(boxmesh, "CG", 1)
-    v2d = df.vertex_to_dof_map(V)
-    y_true_FEniCS = df.Function(V)
-    y_true_FEniCS.vector()[v2d] = y_true.flatten()
-    y_pred_FEniCS = df.Function(V)
-    y_pred_FEniCS.vector()[v2d] = y_pred.flatten()
-
-    diff = np.absolute(y_pred_FEniCS - y_true_FEniCS)
-    return max(diff)
 
 
 def border(domain):
@@ -338,7 +249,7 @@ def generate_phi_numpy(x_0, y_0, lx, ly, theta, nb_vert):
         phi = np.reshape(phi, [np.shape(x_0), nb_vert, nb_vert])
     else:
         phi = np.reshape(phi, [1, nb_vert, nb_vert])
-    return phi  # np.flip(phi, axis=1)
+    return phi
 
 
 def generate_F_numpy(mu0, mu1, sigma, nb_vert):
@@ -352,7 +263,7 @@ def generate_F_numpy(mu0, mu1, sigma, nb_vert):
         F = np.reshape(F, [np.shape(mu0), nb_vert, nb_vert])
     else:
         F = np.reshape(F, [1, nb_vert, nb_vert])
-    return F  # np.flip(F, axis=1)
+    return F
 
 
 def generate_G_numpy(alpha, beta, nb_vert):
@@ -366,7 +277,7 @@ def generate_G_numpy(alpha, beta, nb_vert):
         G = np.reshape(G, [np.shape(alpha), nb_vert, nb_vert])
     else:
         G = np.reshape(G, [1, nb_vert, nb_vert])
-    return G  # np.flip(F, axis=1)
+    return G
 
 
 def generate_manual_new_data_numpy(phi, F, G, dtype=tf.float32):
@@ -384,8 +295,6 @@ def generate_manual_new_data_numpy(phi, F, G, dtype=tf.float32):
     F = tf.constant(F, dtype=dtype)
     phi = tf.constant(phi, dtype=dtype)
     G = tf.constant(G, dtype=dtype)
-
-    # enrichissement des données
     Fx = tf.cumsum(F, axis=1) / nb_vert
     Fy = tf.cumsum(F, axis=2) / nb_vert
     Fxx = tf.cumsum(Fx, axis=1) / nb_vert
@@ -393,8 +302,3 @@ def generate_manual_new_data_numpy(phi, F, G, dtype=tf.float32):
 
     X = tf.stack([F, phi, G, Fx, Fy, Fxx, Fyy, domain], axis=3)
     return X
-
-
-if __name__ == "__main__":
-    X = np.reshape(np.cumsum(np.ones((20, 20))), [20, 20])
-    X_fenics = convert_numpy_matrix_to_fenics(X)

@@ -85,10 +85,10 @@ def test_F():
     mask = omega_mask(64, x_0, y_0, lx, ly, theta)
     plt.figure()
     plt.subplot(1, 2, 1)
-    plt.imshow(F[0])
+    plt.imshow(F[0], origin="lower")
     plt.colorbar()
     plt.subplot(1, 2, 2)
-    plt.imshow(mask * F[0])
+    plt.imshow(mask * F[0], origin="lower")
     plt.colorbar()
     plt.suptitle("test F")
     plt.show()
@@ -100,10 +100,10 @@ def test_G():
     mask = omega_mask(64, x_0, y_0, lx, ly, theta)
     plt.figure()
     plt.subplot(1, 2, 1)
-    plt.imshow(G[0])
+    plt.imshow(G[0], origin="lower")
     plt.colorbar()
     plt.subplot(1, 2, 2)
-    plt.imshow(mask * G[0])
+    plt.imshow(mask * G[0], origin="lower")
     plt.colorbar()
     plt.suptitle("Test G")
     plt.show()
@@ -115,10 +115,10 @@ def test_phi():
     mask = omega_mask(64, x_0, y_0, lx, ly, theta)
     plt.figure()
     plt.subplot(1, 2, 1)
-    plt.imshow(phi[0])
+    plt.imshow(phi[0], origin="lower")
     plt.colorbar()
     plt.subplot(1, 2, 2)
-    plt.imshow(mask * phi[0])
+    plt.imshow(mask * phi[0], origin="lower")
     plt.colorbar()
     plt.suptitle("Test Phi")
     plt.show()
@@ -128,7 +128,7 @@ def rotate(origin, point, angle):
     """
     Rotate a point counterclockwise by a given angle around a given origin.
 
-    The angle should be given in radians.
+    The angle should be in radians.
     """
     ox, oy = origin
     px, py = point
