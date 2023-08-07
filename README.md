@@ -1,27 +1,36 @@
-# Deep physics with varying geometry : a $\phi$-FEM approach
+# A $\phi$-FEM approach to train a Neural Operator as a fast PDE solver for variable geometries
+This repository contains all codes to reproduce results of the paper "A $\phi$-FEM approach to train a Neural Operator as a fast PDE solver for variable geometries", in collaboration with Michel Duprez, Vanessa Lleras, Alexei Lozinski, and Vincent Vigon. 
 
-This repository contains all codes to reproduce results of the paper "Deep physics with varying geometry : a $\phi$-FEM approach", collaboration with Michel Duprez, Vanessa Lleras, Alexei Lozinski and Vincent Vigon. 
+The directory `Generate_figures` contains two Python files that generate figures in the paper. The two other directories contain all the codes for the two numerical test cases. They solve the Poisson equation with non-homogeneous Dirichlet boundary conditions on random parameterized ellipses (`Ellipses`) or non-parametric random shapes (`Random_shapes`). 
 
-Each folder correspond to one test case of the paper. 
+In `./Ellipses/`, there are 4 directories: 
+- `data/`: it contains all the files that compose a data set of size 1500 to perform a training of the operator. 
+- `main/`: it contains the most important codes. More precisely, 
+    - `prepare_data.py`: all the functions needed to generate a data set, 
+    - `generate_data.py`: generation of a data set, 
+    - `utils.py`,
+    - `utils_training.py`: implementation of the FNO, 
+    - `training.ipynb`: to train the operator on a given data set,
+    - `plot_results.ipynb`: to check the performance of a training on the validation sample and a new test sample, 
+    - `utils_compare_methods.py`: implementation of a finite element method and of $\phi$-FEM,
+    - `compare_methods.ipynb`: to compare the performance of the technique with the ones of a standard finite element method and of $\phi$-FEM (error and computation times),
+    - `change_size_images.ipynb`: to evaluate the performance of a model when changing the size of the input images.
 
-- `Ellipses`, the codes for the first test case : Poisson equation with non-homogeneous Dirichlet boundary conditions on random parameterized ellipses,
-- `Random_shapes`, the codes the third test case : Poisson equation with non-homogeneous Dirichlet boundary conditions, on non-parametric random shapes. 
+- `change_padding/`: contains the codes to compare the results of several small training for different padding techniques. 
+- `change_parameters/`: contains the codes to compare the results of several small training for different values of the hyperparameters. 
 
-They are all composed of the same files : 
-- `compare_methods.ipynb` : a notebook containing the codes to compare the results of a trained operator, a standard finite element method and $\phi$-FEM; 
-- `generate_data.py` : a python file to generate a dataset for the corresponding test case;
-- `plot_results.ipynb` : a notebook with the codes to get results on the validation sample;  
-- `prepare_data.py` : some utils to generate the dataset; 
-- `training.ipynb` : the notebook containing the code to perform a training of the operator for each test case;
-- `utils_compare_methods.py` : file containing function to compare FNO, $\phi$-FEM and standard FEM; 
-- `utils_training.py` : principal functions used during a training.
-- `utils.py` : file containing severall utils functions;
-
-Moreover, for the first test case, you will find the file `change_size_images.ipynb`, used to compare results for different sizes of input of the FNO.
-Finally, for the second test case, you can find the file `domain_generator.py`, used to generate random shapes and level-set functions. 
-
-In addition, each folder contains a dataset and pretrained operators.
-
+In `./Random_shapes/`: 
+- `data/`: contains the files that compose a data set of size 9850 to perform a training of the operator. 
+- `prepare_data.py`: all the functions needed to generate a data set, 
+- `generate_domains.py`: code to generate random connected domains contained in the box $(0,1)^2$, using Fourier series,
+- `generate_data.py`: generation of a data set, 
+- `check_data.ipynb`: check the residues of the generated data set, and remove the atypical individuals to have a clean data set,
+- `utils.py`,
+- `utils_training.py`: implementation of the FNO, 
+- `training.ipynb`: to train the operator on a given data set,
+- `plot_results.ipynb`: to check the performance of a training on the validation sample and a new test sample, 
+- `utils_compare_methods.py`: implementation of a finite element method and of $\phi$-FEM,
+- `compare_methods.ipynb`: to compare the performance of the technique with the ones of a standard finite element method and of $\phi$-FEM (error and computation times).
 
 To execute these codes, you will need several packages : *FEniCS*, *numpy*, *matplotlib*, *tensorflow* (with GPU support), *seaborn*, *pandas* and *vedo*. The easiest way to perform these installations is by using Anaconda. If you have Cuda 11.7 compatible drivers installed on your computer, see the result of  
 ```bash
@@ -58,7 +67,7 @@ pip install numpy matplotlib seaborn pandas vedo
 ```
 
 
-Finally, if you want to run generate new shapes using level-set functions and compute the error of the FNO prediction, you will need to perform few more installations to create standard meshes. These installations are detailled in the file `install_mmg.pdf`. 
+Finally, if you want to generate new shapes using level-set functions and compute the error of the FNO prediction, you will need to perform few more installations to create standard meshes. These installations are detailed in the file `install_mmg.pdf`. 
 
 
-Remark : note that some of the codes need many ressources to be used. In particular, the file `./Random_shapes/compare_methods.ipynb` needs approximately 30Gb of memory and takes a long time to run.
+Remark : note that some codes need many resources to be used. In particular, the file `./Random_shapes/compare_methods.ipynb` needs more than 20Gb of memory and takes a long time to run.

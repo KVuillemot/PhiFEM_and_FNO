@@ -125,7 +125,7 @@ class DataLoader:
             axis=[1, 2],
         )
         magnitude = tf.reduce_mean(((F) ** 2 * domain), axis=[1, 2])
-        residues_interior = tf.sqrt(tf.reduce_mean(error / magnitude))
+        residues_interior = tf.reduce_mean(error / magnitude)
 
         return residues_interior
 
