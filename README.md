@@ -1,4 +1,7 @@
 # A $\phi$-FEM approach to train a Neural Operator as a fast PDE solver for variable geometries
+
+**Authors: Michel Duprez, Vanessa Lleras, Alexei Lozinski, Vincent Vigon, and Killian Vuillemot**
+
 This repository contains all codes to reproduce results of the paper "A $\phi$-FEM approach to train a Neural Operator as a fast PDE solver for variable geometries", in collaboration with Michel Duprez, Vanessa Lleras, Alexei Lozinski, and Vincent Vigon. 
 
 The directory `./Generate_figures/` contains two Python files that generate figures in the paper. The two other directories contain all the codes for the two numerical test cases. They solve the Poisson equation with non-homogeneous Dirichlet boundary conditions on random parameterized ellipses (`./Ellipses/`) or non-parametric random shapes (`./Random_shapes/`). 
@@ -32,11 +35,21 @@ In `./Random_shapes/`:
 - `utils_compare_methods.py`: implementation of a finite element method and of $\phi$-FEM,
 - `compare_methods.ipynb`: to compare the performance of the technique with the ones of a standard finite element method and of $\phi$-FEM (error and computation times).
 
-To execute these codes, you will need several packages : *FEniCS*, *numpy*, *matplotlib*, *tensorflow* (with GPU support), *seaborn*, *pandas* and *vedo*. The easiest way to perform these installations is by using Anaconda. If you have Cuda 11.7 compatible drivers installed on your computer, see the result of  
+To execute these codes, you will need several packages : 
+[*FEniCS*](https://fenicsproject.org/),
+[*numpy*](https://numpy.org/doc/stable/index.html),
+[*matplotlib*](https://matplotlib.org/),
+[*tensorflow*](https://www.tensorflow.org/?hl=fr) (with GPU support),
+[*seaborn*](https://seaborn.pydata.org/),
+[*pandas*](https://pandas.pydata.org/),
+[*vedo*](https://vedo.embl.es/#refs),
+[*Cuda*](https://developer.nvidia.com/cuda-downloads). The easiest way to perform these installations is by using Anaconda. 
+
+First check the installed drivers:   
 ```bash
 nvidia-smi
 ```
-you can install the environment `phifem.yml` with 
+If the resulting Cuda version is 11.7, you can install the environment `phifem.yml` with 
 
 ```bash 
 conda env create -f phifem.yml
@@ -69,7 +82,7 @@ pip install numpy matplotlib seaborn pandas vedo
 ```
 
 
-Finally, if you want to generate new shapes using level-set functions and compute the error of the FNO prediction, you will need to perform few more installations to create standard meshes. These installations are detailed in the file `install_mmg.pdf`. 
+Finally, if you want to generate new shapes using level-set functions and compute the error of the FNO prediction, you will need to perform few more installations to create standard meshes. These installations are detailed in the file `install_and_use_mmg.md`. 
 
 
 Remark : note that some codes need many resources to be used. In particular, the file `./Random_shapes/compare_methods.ipynb` needs more than 20Gb of memory and takes a long time to run.

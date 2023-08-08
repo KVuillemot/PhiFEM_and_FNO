@@ -17,8 +17,8 @@ dependencies:
   - brotlipy=0.7.0=py39h27cfd23_1003
   - bzip2=1.0.8=h7f98852_4
   - c-ares=1.18.1=h7f98852_0
-  - ca-certificates=2022.12.7=ha878542_0
-  - certifi=2022.12.7=pyhd8ed1ab_0
+  - ca-certificates=2023.7.22=hbcca054_0
+  - certifi=2023.7.22=pyhd8ed1ab_0
   - cffi=1.15.1=py39h74dc2b5_0
   - charset-normalizer=2.0.4=pyhd3eb1b0_0
   - cmake=3.21.3=h8897547_0
@@ -94,7 +94,6 @@ dependencies:
   - mumps-mpi=5.2.1=hd6b9cac_10
   - ncurses=6.4=h6a678d5_0
   - nest-asyncio=1.5.6=pyhd8ed1ab_0
-  - numpy=1.22.3=py39hc58783e_2
   - openssl=1.1.1l=h7f98852_0
   - packaging=23.0=py39h06a4308_0
   - parmetis=4.0.3=h2a9763c_1005
@@ -131,7 +130,6 @@ dependencies:
   - ruamel.yaml.clib=0.2.6=py39h5eee18b_1
   - scalapack=2.0.2=hf659fdc_1009
   - scotch=6.0.9=h3858553_1
-  - setuptools=66.0.0=py39h06a4308_0
   - six=1.16.0=pyh6c4a22f_0
   - slepc=3.14.2=h44d3fa2_0
   - slepc4py=3.14.0=py39h1e75aa9_1
@@ -140,7 +138,6 @@ dependencies:
   - suitesparse=5.6.0=h717dc36_0
   - superlu=5.2.2=h16cfea0_0
   - superlu_dist=6.2.0=h25dcc4a_5
-  - sympy=1.11.1=pyh04b8f61_3
   - sysroot_linux-64=2.12=he073ed8_15
   - tbb=2020.2=h4bd325d_4
   - tk=8.6.12=h1ccaba5_0
@@ -152,7 +149,6 @@ dependencies:
   - typing_extensions=4.5.0=pyha770c72_0
   - urllib3=1.26.15=py39h06a4308_0
   - wcwidth=0.2.6=pyhd8ed1ab_0
-  - wheel=0.38.4=py39h06a4308_0
   - xz=5.2.10=h5eee18b_1
   - zeromq=4.3.4=h9c3ff4c_1
   - zlib=1.2.13=h5eee18b_0
@@ -183,13 +179,14 @@ dependencies:
       - markupsafe==2.1.2
       - matplotlib==3.7.1
       - ml-dtypes==0.1.0
+      - numpy==1.25.2
       - nvidia-cublas-cu11==11.11.3.6
       - nvidia-cudnn-cu11==8.6.0.163
       - oauthlib==3.2.2
       - opt-einsum==3.3.0
-      - pandas==2.0.0
+      - pandas==2.0.3
       - pillow==9.5.0
-      - pip==23.1
+      - pip==23.2.1
       - protobuf==4.22.3
       - pyasn1==0.5.0
       - pyasn1-modules==0.3.0
@@ -199,6 +196,8 @@ dependencies:
       - rsa==4.9
       - scipy==1.10.1
       - seaborn==0.12.2
+      - setuptools==68.0.0
+      - sympy==1.12
       - tensorboard==2.12.2
       - tensorboard-data-server==0.7.0
       - tensorboard-plugin-wit==1.8.1
@@ -207,9 +206,9 @@ dependencies:
       - tensorflow-io-gcs-filesystem==0.32.0
       - termcolor==2.2.0
       - tzdata==2023.3
-      - vedo==2023.4.4
+      - vedo==2023.4.6
       - vtk==9.2.6
       - werkzeug==2.2.3
+      - wheel==0.41.1
       - wrapt==1.14.1
       - zipp==3.15.0
-prefix: /home/kvuillemot/anaconda3/envs/phifem
