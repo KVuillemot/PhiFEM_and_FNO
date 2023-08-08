@@ -1,7 +1,7 @@
 # A $\phi$-FEM approach to train a Neural Operator as a fast PDE solver for variable geometries
 This repository contains all codes to reproduce results of the paper "A $\phi$-FEM approach to train a Neural Operator as a fast PDE solver for variable geometries", in collaboration with Michel Duprez, Vanessa Lleras, Alexei Lozinski, and Vincent Vigon. 
 
-The directory `Generate_figures` contains two Python files that generate figures in the paper. The two other directories contain all the codes for the two numerical test cases. They solve the Poisson equation with non-homogeneous Dirichlet boundary conditions on random parameterized ellipses (`Ellipses`) or non-parametric random shapes (`Random_shapes`). 
+The directory `./Generate_figures/` contains two Python files that generate figures in the paper. The two other directories contain all the codes for the two numerical test cases. They solve the Poisson equation with non-homogeneous Dirichlet boundary conditions on random parameterized ellipses (`./Ellipses/`) or non-parametric random shapes (`./Random_shapes/`). 
 
 In `./Ellipses/`, there are 4 directories: 
 - `data/`: it contains all the files that compose a data set of size 1500 to perform a training of the operator. 
