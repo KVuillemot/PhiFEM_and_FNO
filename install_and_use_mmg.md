@@ -2,7 +2,7 @@
 
 **Authors: Michel Duprez, Vanessa Lleras, Alexei Lozinski, Vincent Vigon, and Killian Vuillemot**
 
-To generate meshes using level-set functions and use them with FEniCS, it is required to install: \[[mmg](https://www.mmgtools.org/)], \[[Medit](https://github.com/ISCDtoolbox/Medit)], \[[pymedit](https://gitlab.com/florian.feppon/pymedit)], and \[[meshio](https://github.com/nschloe/meshio)]. All the installations are presented in the following. Moreover, two examples of use are included in this file. 
+To generate meshes using level-set functions and use them with FEniCS, it is required to install: [mmg](https://www.mmgtools.org/), [Medit](https://github.com/ISCDtoolbox/Medit), [pymedit](https://gitlab.com/florian.feppon/pymedit), and [meshio](https://github.com/nschloe/meshio). All the installations are presented in the following. Moreover, two examples of use are included in this file. 
 
 The 3 first parts are taken from: https://github.com/MmgTools/Mmg-Day-2018_TP/tree/master.
 
