@@ -45,6 +45,8 @@ conda env create -f phifem.yml
 and then just type 
 ```bash 
 source activate phifem
+conda install -c conda-forge superlu_dist=6.2.0
+pip3 install mpi4py==3.0.3 --no-binary mpi4py --user --force --no-cache-dir
 ``` 
 
 If the result of nvidia-smi is not Cuda 11.7, you can either install another driver or create a conda environment. 
