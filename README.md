@@ -23,7 +23,6 @@ In `./Ellipses/`, there are 4 directories:
 - `change_parameters/`: contains the codes to compare the results of several small training for different values of the hyperparameters. 
 
 In `./Random_shapes/`: 
-- `data/`: contains the files that compose a data set of size 9850 to perform a training of the operator. 
 - `prepare_data.py`: all the functions needed to generate a data set, 
 - `generate_domains.py`: code to generate random connected domains contained in the box $(0,1)^2$, using Fourier series,
 - `generate_data.py`: generation of a data set, 
@@ -34,6 +33,8 @@ In `./Random_shapes/`:
 - `plot_results.ipynb`: to check the performance of a training on the validation sample and a new test sample, 
 - `utils_compare_methods.py`: implementation of a finite element method and of $\phi$-FEM,
 - `compare_methods.ipynb`: to compare the performance of the technique with the ones of a standard finite element method and of $\phi$-FEM (error and computation times).
+  
+A data set of size 9850 for the case of random shapes is available at : [https://figshare.com/articles/dataset/Data_set_/23905671](https://figshare.com/articles/dataset/Data_set_/23905671). To use it, just download all and copy the files in the directory `./Random_shapes/data_9850/`.
 
 To execute these codes, you will need several packages : 
 [*FEniCS*](https://fenicsproject.org/),
