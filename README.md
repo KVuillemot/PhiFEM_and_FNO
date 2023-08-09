@@ -65,7 +65,7 @@ pip3 install mpi4py==3.0.3 --no-binary mpi4py --user --force --no-cache-dir
 
 If the result of nvidia-smi is not Cuda 11.7, you can either install another driver or create a conda environment. 
 
-For that, use the following for Cuda $<$ 12.0 (see \[[tensorflow](https://www.tensorflow.org/install/pip?hl=fr)]) : 
+For that, use the following for Cuda $<$ 12.0 (see [*tensorflow*](https://www.tensorflow.org/install/pip?hl=fr)) : 
 
 ```bash 
 conda create --name envname python=3.8.10
