@@ -407,7 +407,7 @@ def generate_F_numpy(mu0, mu1, sigma, nb_vert):
     XXYY = np.stack([XX, YY])
     F = call_F(XXYY, mu0, mu1, sigma)
     if isinstance(mu0, np.ndarray):
-        F = np.reshape(F, [np.shape(mu0), nb_vert, nb_vert])
+        F = np.reshape(F, [np.shape(mu0)[0], nb_vert, nb_vert])
     else:
         F = np.reshape(F, [1, nb_vert, nb_vert])
     return F
@@ -431,7 +431,7 @@ def generate_G_numpy(alpha, beta, nb_vert):
     XXYY = np.stack([XX, YY])
     G = call_G(XXYY, alpha, beta)
     if isinstance(alpha, np.ndarray):
-        G = np.reshape(G, [np.shape(alpha), nb_vert, nb_vert])
+        G = np.reshape(G, [np.shape(alpha)[0], nb_vert, nb_vert])
     else:
         G = np.reshape(G, [1, nb_vert, nb_vert])
     return G
