@@ -4,7 +4,7 @@
 
 This repository contains all codes to reproduce results of the paper "A $\phi$-FEM approach to train a Neural Operator as a fast PDE solver for variable geometries", in collaboration with Michel Duprez, Vanessa Lleras, Alexei Lozinski, and Vincent Vigon. 
 
-The directory `./Generate_figures/` contains two Python files that generate figures in the paper. The two other directories contain all the codes for the two numerical test cases. They solve the Poisson equation with non-homogeneous Dirichlet boundary conditions on random parameterized ellipses (`./Ellipses/`) or non-parametric random shapes (`./Random_shapes/`). 
+The directory `./Generate_figures/` contains two Python files that generate figures in the paper. The two other directories contain all the codes for the two numerical test cases. They solve the Poisson equation with non-homogeneous Dirichlet boundary conditions on random parameterized ellipses (`./Ellipses/`) or complex random shapes (`./Random_shapes/`). 
 
 In `./Ellipses/`, there are 4 directories: 
 - `data/`: it contains all the files that compose a data set of size 1500 to perform a training of the operator. 
@@ -34,7 +34,7 @@ In `./Random_shapes/`:
 - `utils_compare_methods.py`: implementation of a finite element method and of $\phi$-FEM,
 - `compare_methods.ipynb`: to compare the performance of the technique with the ones of a standard finite element method and of $\phi$-FEM (error and computation times).
   
-A data set of size 9850 for the case of random shapes is available at : [https://figshare.com/articles/dataset/Data_set_/23905671](https://figshare.com/articles/dataset/Data_set_/23905671). To use it, just download all and copy the files in the directory `./Random_shapes/data_9850/`.
+A data set of size 9850 for the case of random shapes is available at : [https://figshare.com/articles/dataset/Data_set_/23905671](https://figshare.com/articles/dataset/Data_set_/23905671). To use it, just download all and place the files in the directory `./Random_shapes/data_9850/`.
 
 To execute these codes, you will need several packages : 
 [*FEniCS*](https://fenicsproject.org/),
