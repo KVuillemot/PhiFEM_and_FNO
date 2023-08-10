@@ -36,6 +36,8 @@ In `./Random_shapes/`:
   
 A data set of size 9850 for the case of random shapes is available at : [https://figshare.com/articles/dataset/Data_set_/23905671](https://figshare.com/articles/dataset/Data_set_/23905671). To use it, just download all and place the files in the directory `./Random_shapes/data_9850/`.
 
+Moreover, in `./Ellipses/main/models/best_model/` and in `./Random_shapes/models/best_model/` we provide pre-trained operators for the two test cases. 
+
 To execute these codes, you will need several packages : 
 [*FEniCS*](https://fenicsproject.org/),
 [*numpy*](https://numpy.org/doc/stable/index.html),
