@@ -831,7 +831,6 @@ class Agent:
                 fontsize=16,
             )
 
-        plt.title("Misfits")
         plt.xlabel("Epochs", fontsize=16)
         plt.yscale("log")
         plt.title(r"Evolution of the $\mathcal{L}_i$", fontsize=16)
