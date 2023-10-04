@@ -26,24 +26,6 @@ sns.set(rc={"xtick.bottom": True, "ytick.left": True})
 colors = sns.color_palette("mako").as_hex()
 my_cmap = sns.color_palette("viridis", as_cmap=True)
 
-pre_laplacian = Derivator_fd(
-    [(0, 0), (1, 1)], interval_lenghts=[1, 1], axes=[1, 2]
-)
-
-
-def laplacian_fn(U):
-    """
-    Compute the Laplacian of a given tensor U.
-
-    Parameters:
-        U (tf.Tensor): Input tensor of shape (batch_size, nx, ny).
-
-    Returns:
-        tf.Tensor: The Laplacian of U, with the same shape as U.
-    """
-    Uxx, Uyy = pre_laplacian(U)
-    return Uxx + Uyy
-
 
 class DataLoader:
     """
@@ -108,26 +90,6 @@ class DataLoader:
         self.X_train, self.X_val = separe(X)
         self.Y_train, self.Y_val = separe(Y)
         self.nb_vert = self.X_train.shape[1]
-
-        residues_interior = self.compute_residues(self.X_val, self.Y_val)
-        print("on val data: residues_interior = ", residues_interior.numpy())
-        self.residues_interior_val = residues_interior
-
-    def compute_residues(self, X, Y):
-        F = X[:, :, :, 0] * self.max_norm_F
-        Phi = X[:, :, :, 1]
-        G = X[:, :, :, 2]
-        W = Y[:, :, :, 0]
-        domain = X[:, :, :, -1]
-        laplacian = laplacian_fn(Phi * W + G)
-        error = tf.reduce_mean(
-            ((laplacian + F) ** 2 * domain),
-            axis=[1, 2],
-        )
-        magnitude = tf.reduce_mean(((F) ** 2 * domain), axis=[1, 2])
-        residues_interior = tf.reduce_mean(error / magnitude)
-
-        return residues_interior
 
 
 def reflexive_padding_2d(W: tf.Tensor, pad_1: int, pad_2: int, mode: str):
@@ -314,12 +276,13 @@ class Agent:
         pad_prop=0.05,
         pad_mode="REFLECT",
         index_test_case=1,
+        loss_level=2,
     ):
         self.nb_vert = data.nb_vert
         self.data = data
         self.index_test_case = index_test_case
 
-        self.model = FNO2d(20, width, pad_prop, pad_mode=pad_mode)
+        self.model = FNO2d(modes, width, pad_prop, pad_mode=pad_mode)
         self.learning_rate = 1e-3
         self.optimizer_misfit = tf.keras.optimizers.Adam(self.learning_rate)
         x = tf.linspace(0.0, 1.0, self.nb_vert)
@@ -327,7 +290,7 @@ class Agent:
         self.x = tf.Variable(tf.reshape(xx, [-1]))
         self.y = tf.Variable(tf.reshape(yy, [-1]))
 
-        self.best_possible_residues_interior = self.data.residues_interior_val
+        self.loss_level = loss_level
 
         self.memo_misfit_0_train = []
         self.memo_misfit_0_val = []
@@ -335,8 +298,8 @@ class Agent:
         self.memo_misfit_1_val = []
         self.memo_misfit_2_train = []
         self.memo_misfit_2_val = []
-
-        self.memo_residues_interior_val = []
+        self.memo_loss_train = []
+        self.memo_loss_val = []
 
         self.memo_val_steps = []
         self.memo_optimize_misfit = []
@@ -353,146 +316,144 @@ class Agent:
         )  # {"x":(0,),"y":(1,),"xx":(0,0),"yy":(1,1),"xy":(0,1)}
 
     def H_loss(self, Y_true, Y_pred, Phi, level, domain, G):
-        nb_vert = np.shape(domain)[-1]
-        domain_prop = tf.reduce_sum(domain, axis=[1, 2]) / nb_vert**2
-
-        loss_0 = tf.reduce_mean(
-            tf.reduce_mean(
-                (
-                    (
-                        (Y_true * Phi[:, :, :, None] + G[:, :, :, None])
-                        - (Y_pred * Phi[:, :, :, None] + G[:, :, :, None])
-                    )
-                    * domain[:, :, :, None]
-                )
-                ** 2,
-                axis=[1, 2, 3],
-            )
-            / domain_prop[:]
+        (
+            Y_true_x,
+            Y_true_y,
+            Y_true_xx,
+            Y_true_yy,
+            Y_true_xy,
+        ) = self.derivator_level2(
+            Y_true * Phi[:, :, :, None] + G[:, :, :, None]
+        )
+        (
+            Y_pred_x,
+            Y_pred_y,
+            Y_pred_xx,
+            Y_pred_yy,
+            Y_pred_xy,
+        ) = self.derivator_level2(
+            Y_pred * Phi[:, :, :, None] + G[:, :, :, None]
         )
 
+        error_0 = tf.reduce_mean(
+            (
+                ((Y_true * Phi[:, :, :, None]) - (Y_pred * Phi[:, :, :, None]))
+                * domain[:, :, :, None]
+            )
+            ** 2,
+            axis=[1, 2, 3],
+        )
+
+        error_1 = (
+            tf.reduce_mean(
+                ((Y_true_x - Y_pred_x) * domain[:, :, :, None]) ** 2,
+                axis=[1, 2, 3],
+            )
+        ) + (
+            tf.reduce_mean(
+                ((Y_true_y - Y_pred_y) * domain[:, :, :, None]) ** 2,
+                axis=[1, 2, 3],
+            )
+        )
+
+        error_2 = (
+            (
+                tf.reduce_mean(
+                    ((Y_true_xx - Y_pred_xx) * domain[:, :, :, None]) ** 2,
+                    axis=[1, 2, 3],
+                )
+            )
+            + (
+                tf.reduce_mean(
+                    ((Y_true_xy - Y_pred_xy) * domain[:, :, :, None]) ** 2,
+                    axis=[1, 2, 3],
+                )
+            )
+            + (
+                tf.reduce_mean(
+                    ((Y_true_yy - Y_pred_yy) * domain[:, :, :, None]) ** 2,
+                    axis=[1, 2, 3],
+                )
+            )
+        )
+
+        magnitude_0 = tf.reduce_mean(
+            (
+                ((Y_true * Phi[:, :, :, None] + G[:, :, :, None]))
+                * domain[:, :, :, None]
+            )
+            ** 2,
+            axis=[1, 2, 3],
+        )
+        magnitude_1 = (
+            tf.reduce_mean(
+                ((Y_true_x) * domain[:, :, :, None]) ** 2,
+                axis=[1, 2, 3],
+            )
+        ) + (
+            tf.reduce_mean(
+                ((Y_true_y) * domain[:, :, :, None]) ** 2,
+                axis=[1, 2, 3],
+            )
+        )
+        magnitude_2 = (
+            (
+                tf.reduce_mean(
+                    ((Y_true_xx) * domain[:, :, :, None]) ** 2,
+                    axis=[1, 2, 3],
+                )
+            )
+            + (
+                tf.reduce_mean(
+                    ((Y_true_xy) * domain[:, :, :, None]) ** 2,
+                    axis=[1, 2, 3],
+                )
+            )
+            + (
+                tf.reduce_mean(
+                    ((Y_true_yy) * domain[:, :, :, None]) ** 2,
+                    axis=[1, 2, 3],
+                )
+            )
+        )
         if level == 0:
-            return loss_0, np.nan, np.nan
-
+            error = error_0
+            magnitude = magnitude_0
+            loss_0 = tf.reduce_mean(tf.sqrt(error_0 / magnitude_0))
+            loss_1, loss_2 = np.nan, np.nan
         elif level == 1:
-            Y_true_x, Y_true_y = self.derivator_level1(
-                Y_true * Phi[:, :, :, None] + G[:, :, :, None]
-            )
-            Y_pred_x, Y_pred_y = self.derivator_level1(
-                Y_pred * Phi[:, :, :, None] + G[:, :, :, None]
-            )
-
-            loss_1 = (
-                tf.reduce_mean(
-                    tf.reduce_mean(
-                        ((Y_true_x - Y_pred_x) * domain[:, :, :, None]) ** 2,
-                        axis=[1, 2, 3],
-                    )
-                    / domain_prop[:]
-                )
-            ) + (
-                tf.reduce_mean(
-                    tf.reduce_mean(
-                        ((Y_true_y - Y_pred_y) * domain[:, :, :, None]) ** 2,
-                        axis=[1, 2, 3],
-                    )
-                    / domain_prop[:]
-                )
-            )
-
-            return loss_0, loss_1, np.nan
-
+            error = error_0 + error_1
+            magnitude = magnitude_0 + magnitude_1
+            loss_0 = tf.reduce_mean(tf.sqrt(error_0 / magnitude_0))
+            loss_1 = tf.reduce_mean(tf.sqrt(error_1 / magnitude_1))
+            loss_2 = np.nan
         else:
-            (
-                Y_true_x,
-                Y_true_y,
-                Y_true_xx,
-                Y_true_yy,
-                Y_true_xy,
-            ) = self.derivator_level2(
-                Y_true * Phi[:, :, :, None] + G[:, :, :, None]
-            )
-            (
-                Y_pred_x,
-                Y_pred_y,
-                Y_pred_xx,
-                Y_pred_yy,
-                Y_pred_xy,
-            ) = self.derivator_level2(
-                Y_pred * Phi[:, :, :, None] + G[:, :, :, None]
-            )
+            error = error_0 + error_1 + error_2
+            magnitude = magnitude_0 + magnitude_1 + magnitude_2
+            loss_0 = tf.reduce_mean(tf.sqrt(error_0 / magnitude_0))
+            loss_1 = tf.reduce_mean(tf.sqrt(error_1 / magnitude_1))
+            loss_2 = tf.reduce_mean(tf.sqrt(error_2 / magnitude_2))
 
-            loss_1 = (
-                tf.reduce_mean(
-                    tf.reduce_mean(
-                        ((Y_true_x - Y_pred_x) * domain[:, :, :, None]) ** 2,
-                        axis=[1, 2, 3],
-                    )
-                    / domain_prop[:]
-                )
-            ) + (
-                tf.reduce_mean(
-                    tf.reduce_mean(
-                        ((Y_true_y - Y_pred_y) * domain[:, :, :, None]) ** 2,
-                        axis=[1, 2, 3],
-                    )
-                    / domain_prop[:]
-                )
-            )
-
-            loss_2 = (
-                (
-                    tf.reduce_mean(
-                        tf.reduce_mean(
-                            ((Y_true_xx - Y_pred_xx) * domain[:, :, :, None])
-                            ** 2,
-                            axis=[1, 2, 3],
-                        )
-                        / domain_prop[:]
-                    )
-                )
-                + (
-                    tf.reduce_mean(
-                        tf.reduce_mean(
-                            ((Y_true_xy - Y_pred_xy) * domain[:, :, :, None])
-                            ** 2,
-                            axis=[1, 2, 3],
-                        )
-                        / domain_prop[:]
-                    )
-                )
-                + (
-                    tf.reduce_mean(
-                        tf.reduce_mean(
-                            ((Y_true_yy - Y_pred_yy) * domain[:, :, :, None])
-                            ** 2,
-                            axis=[1, 2, 3],
-                        )
-                        / domain_prop[:]
-                    )
-                )
-            )
-
-            return loss_0, loss_1, loss_2
+        loss = tf.reduce_mean(tf.sqrt(error / magnitude))
+        return loss_0, loss_1, loss_2, loss
 
     @tf.function
     def validate(self):
         print("validate method tracing")
         Y_pred = self.model.call(self.data.X_val)
-        misfit_0, misfit_1, misfit_2 = self.H_loss(
+        misfit_0, misfit_1, misfit_2, loss = self.H_loss(
             self.data.Y_val,
             Y_pred,
             self.data.X_val[:, :, :, 1],
-            level=2,
+            level=self.loss_level,
             domain=self.data.X_val[:, :, :, -1],
             G=self.data.X_val[:, :, :, 2],
         )
-        residues_interior = self.data.compute_residues(self.data.X_val, Y_pred)
         return (
             misfit_0,
             misfit_1,
             misfit_2,
-            residues_interior,
+            loss,
         )
 
     @tf.function
@@ -505,6 +466,7 @@ class Agent:
         total_misfit_0 = 0
         total_misfit_1 = 0
         total_misfit_2 = 0
+        total_loss = 0
 
         for i in range(nb_batch):
             sli = slice(i * batch_size, (i + 1) * batch_size)
@@ -512,7 +474,7 @@ class Agent:
 
             with tf.GradientTape() as tape:
                 y_pred = self.model.call(X_)
-                misfit_0, misfit_1, misfit_2 = self.H_loss(
+                misfit_0, misfit_1, misfit_2, loss = self.H_loss(
                     Y_,
                     y_pred,
                     X_[:, :, :, 1],
@@ -520,89 +482,77 @@ class Agent:
                     X_[:, :, :, -1],
                     X_[:, :, :, 2],
                 )
-                if level == 0:
-                    misfit = misfit_0
-                elif level == 1:
-                    misfit = misfit_0 + misfit_1
-                elif level == 2:
-                    misfit = misfit_0 + misfit_1 + misfit_2
-                else:
-                    raise ValueError("Invalid level")
 
                 tv = self.model.trainable_variables
-                grad = tape.gradient(misfit, tv)
+                grad = tape.gradient(loss, tv)
                 self.optimizer_misfit.apply_gradients(zip(grad, tv))
 
             total_misfit_0 += misfit_0
             total_misfit_1 += misfit_1
             total_misfit_2 += misfit_2
+            total_loss += loss
 
         return (
             total_misfit_0 / nb_batch,
             total_misfit_1 / nb_batch,
             total_misfit_2 / nb_batch,
+            total_loss / nb_batch,
         )
 
-    def scheduler(self, epoch, lr):
-        if (epoch + 1) % 200 == 0.0:
-            return lr / 2.0
-        else:
-            return lr
+    def scheduler(self, epoch, lr, power, final):
+        return lr * np.exp(-power * epoch)
 
-    def train(self, misfit_level, epochs):
+    def train(self, epochs):
         try:
+            original_learning_rate = self.learning_rate
             for i in range(epochs):
-                self.learning_rate = self.scheduler(i, self.learning_rate)
+                self.learning_rate = self.scheduler(
+                    i, original_learning_rate, 0.0012, 2000
+                )
                 self.optimizer_misfit.lr.assign(self.learning_rate)
                 self.memo_optimize_misfit.append(i)
-                self.train_one_epoch(misfit_level, i)
+                self.train_one_epoch(self.loss_level, i)
 
                 if i > 0 and (i + 1) % 10 == 0:
                     (
                         misfit_0,
                         misfit_1,
                         misfit_2,
-                        residues_interior,
+                        loss,
                     ) = self.validate()
                     self.memo_misfit_0_val.append(misfit_0)
                     self.memo_misfit_1_val.append(misfit_1)
                     self.memo_misfit_2_val.append(misfit_2)
-
-                    self.memo_residues_interior_val.append(residues_interior)
+                    self.memo_loss_val.append(loss)
                     print(
-                        f"VAL:step:{i}, misfit_0:{misfit_0:.2e},misfit_1:{misfit_1:.2e},misfit_2:{misfit_2:.2e},residues_interior:{residues_interior:.2e}"
+                        f"VAL: step:{i}, l0:{misfit_0:.2e}, l1:{misfit_1:.2e}, l2:{misfit_2:.2e}, L:{loss:.2e}, lr:{self.learning_rate:.4e}"
                     )
                     self.memo_val_steps.append(i)
-
-                if (i + 1) % 50 == 0 and i > 0:
                     if not (
                         os.path.exists(
                             f"./models/models_{self.index_test_case}"
                         )
                     ):
                         os.makedirs(f"./models/models_{self.index_test_case}/")
-                        os.makedirs(
-                            f"./models/models_{self.index_test_case}/plots/"
-                        )
+
                     self.model.save_weights(
                         f"./models/models_{self.index_test_case}/model_{i+1}/model_weights"
                     )
-                    self.show_curves(save=True, i=i + 1)
 
         except KeyboardInterrupt:
             pass
 
-        self.show_curves()
         if not (os.path.exists(f"./misfits_train/")):
             os.makedirs(f"./misfits_train/misfits_0")
             os.makedirs(f"./misfits_train/misfits_1")
             os.makedirs(f"./misfits_train/misfits_2")
+            os.makedirs(f"./misfits_train/loss")
         if not (os.path.exists(f"./misfits_val/")):
             os.makedirs(f"./misfits_val/misfits_0")
             os.makedirs(f"./misfits_val/misfits_1")
             os.makedirs(f"./misfits_val/misfits_2")
-        if not (os.path.exists(f"./residues/")):
-            os.makedirs(f"./residues/")
+            os.makedirs(f"./misfits_val/loss")
+
         np.save(
             f"./misfits_val/misfits_0/model_{self.index_test_case}.npy",
             np.array(self.memo_misfit_0_val),
@@ -614,6 +564,10 @@ class Agent:
         np.save(
             f"./misfits_val/misfits_2/model_{self.index_test_case}.npy",
             np.array(self.memo_misfit_2_val),
+        )
+        np.save(
+            f"./misfits_val/loss/model_{self.index_test_case}.npy",
+            np.array(self.memo_loss_val),
         )
         np.save(
             f"./misfits_train/misfits_0/model_{self.index_test_case}.npy",
@@ -628,8 +582,8 @@ class Agent:
             np.array(self.memo_misfit_2_train),
         )
         np.save(
-            f"./residues/model_{self.index_test_case}.npy",
-            np.array(self.memo_residues_interior_val),
+            f"./misfits_train/loss/model_{self.index_test_case}.npy",
+            np.array(self.memo_loss_train),
         )
 
     def train_one_epoch(self, misfit_level, i):
@@ -649,198 +603,21 @@ class Agent:
         X = tf.gather(self.data.X_train, rand_i)
         Y = tf.gather(self.data.Y_train, rand_i)
 
-        misfit_0, misfit_1, misfit_2 = (
+        misfit_0, misfit_1, misfit_2, loss = (
+            np.nan,
             np.nan,
             np.nan,
             np.nan,
         )
 
-        misfit_0, misfit_1, misfit_2 = self.train_one_epoch_misfit_acc(
+        misfit_0, misfit_1, misfit_2, loss = self.train_one_epoch_misfit_acc(
             X, Y, batch_size, nb_batch, misfit_level
         )
 
         self.memo_misfit_0_train.append(misfit_0)
         self.memo_misfit_1_train.append(misfit_1)
         self.memo_misfit_2_train.append(misfit_2)
+        self.memo_loss_train.append(loss)
         print(
-            f"step:{i},misfit_0:{misfit_0:.2e},misfit_1:{misfit_1:.2e},misfit_2:{misfit_2:.2e},duration:{time.time()-ti0}"
+            f"step:{i}, l0:{misfit_0:.2e}, l1:{misfit_1:.2e}, l2:{misfit_2:.2e}, L:{loss:.2e}, duration:{(time.time()-ti0):.2f}"
         )
-
-    def show_curves(self, save=False, i=0):
-        plt.figure(figsize=(8, 6))
-        plt.plot(self.memo_misfit_0_train, "k", label="misfit_0")
-        plt.plot(self.memo_val_steps, self.memo_misfit_0_val, "k.")
-
-        plt.plot(self.memo_misfit_1_train, "b", label="misfit_1")
-        plt.plot(self.memo_val_steps, self.memo_misfit_1_val, "b.")
-
-        plt.plot(self.memo_misfit_2_train, "c", label="misfit_2")
-        plt.plot(self.memo_val_steps, self.memo_misfit_2_val, "c.")
-
-        plt.title("Misfits")
-        plt.yscale("log")
-        plt.legend()
-        plt.tight_layout()
-        if save:
-            plt.savefig(
-                f"./models/models_{self.index_test_case}/plots/misfits_{i}.png"
-            )
-        plt.show()
-
-        plt.figure(figsize=(8, 6))
-        plt.plot(
-            self.memo_val_steps,
-            self.memo_residues_interior_val,
-            "k.",
-            label="residues",
-        )
-        plt.title(
-            f"$\phi$-FEM residues : {self.best_possible_residues_interior:.1e}"
-        )
-        plt.yscale("log")
-        plt.legend()
-        plt.tight_layout()
-        if save:
-            plt.savefig(
-                f"./models/models_{self.index_test_case}/plots/residues_{i}.png"
-            )
-        plt.show()
-
-    def show_results(self):
-        nb = 5
-        X_val, Y_val = self.data.X_val[:nb], self.data.Y_val[:nb]
-        Y_pred = self.model.call(X_val)
-        F = X_val[:, :, :, 0] * self.data.max_norm_F
-        U_fe = Y_val[:, :, :, 0] * X_val[:, :, :, 1] + X_val[:, :, :, 2]
-        U_pi = Y_pred[:, :, :, 0] * X_val[:, :, :, 1] + X_val[:, :, :, 2]
-
-        plot_laplacian(F, U_fe, U_pi, X_val[:, :, :, -1])
-        plot_results(U_fe, U_pi, X_val[:, :, :, -1])
-
-
-def plot_results(U_fe, U_pi, domain):
-    nb = U_fe.shape[0]
-
-    fig, axs = plt.subplots(nb, 3, figsize=(6, 2 * nb))
-
-    U_fe_d = U_fe * domain
-    U_pi_d = U_pi * domain
-    delta = U_fe_d - U_pi_d
-
-    vmin_pi = tf.reduce_min(U_pi_d).numpy()
-    vmax_pi = tf.reduce_max(U_pi_d).numpy()
-    print(
-        f"for U_pi[:nb] with nb={nb}, on disk, min,max values are",
-        vmin_pi,
-        vmax_pi,
-    )
-
-    vmin_fe = tf.reduce_min(U_fe_d).numpy()
-    vmax_fe = tf.reduce_max(U_fe_d).numpy()
-    print(
-        f"for U_fe[:nb] with nb={nb}, on disk, min,max values are",
-        vmin_fe,
-        vmax_fe,
-    )
-
-    vmin = np.min([vmin_fe, vmin_pi])
-    vmax = np.max([vmax_fe, vmax_pi])
-
-    im = None
-    for i in range(nb):
-        for j in [0, 1, 2]:
-            axs[i, j].axis("off")
-        im = axs[i, 0].imshow(
-            U_fe_d[i], vmin=vmin, vmax=vmax, cmap=my_cmap, origin="lower"
-        )
-        axs[i, 1].imshow(
-            U_pi_d[i], vmin=vmin, vmax=vmax, cmap=my_cmap, origin="lower"
-        )
-        axs[i, 2].imshow(
-            delta[i], vmin=vmin, vmax=vmax, cmap=my_cmap, origin="lower"
-        )
-
-    axs[0, 0].set_title("U_fe")
-    axs[0, 1].set_title("U_pi")
-    axs[0, 2].set_title("U_fe - U_pi")
-
-    fig.subplots_adjust(right=0.8)
-    cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
-    fig.colorbar(im, cax=cbar_ax)
-
-    plt.show()
-
-
-def plot_laplacian(F, U_fe, U_pi, domain):
-    if U_pi is None:
-        U_pi = tf.zeros_like(U_fe)
-
-    pre_laplacian = Derivator_fd(
-        [(0, 0), (1, 1)], interval_lenghts=[1, 1], axes=[1, 2]
-    )
-
-    def laplacian(U):
-        Uxx, Uyy = pre_laplacian(U)
-        return Uxx + Uyy
-
-    ti0 = time.time()
-    delta_U_fe = laplacian(U_fe)
-    delta_U_pi = laplacian(U_pi)
-
-    print("duration:", time.time() - ti0)
-
-    _deltaU_fe_d = -delta_U_fe * domain
-    _deltaU_pi_d = -delta_U_pi * domain
-    F_d = F * domain
-
-    vmin_fe = tf.reduce_min(_deltaU_fe_d).numpy()
-    vmax_fe = tf.reduce_max(_deltaU_fe_d).numpy()
-
-    nb = F.shape[0]
-    print(
-        f"for - div grad U_fe[:nb] with nb={nb}, on disk, min,max values are",
-        vmin_fe,
-        vmax_fe,
-    )
-
-    vmin_pi = tf.reduce_min(_deltaU_pi_d).numpy()
-    vmax_pi = tf.reduce_max(_deltaU_pi_d).numpy()
-    print(
-        f"for - div grad U_pi[:nb] with nb={nb}, on disk, min,max values are",
-        vmin_pi,
-        vmax_pi,
-    )
-
-    vmin_f = tf.reduce_min(F_d).numpy()
-    vmax_f = tf.reduce_max(F_d).numpy()
-    print(
-        f"for F[:nb] with nb={nb}, on disk, min,max values are", vmin_f, vmax_f
-    )
-
-    vmin = np.min([vmin_f, vmin_fe, vmin_pi])
-    vmax = np.max([vmax_f, vmax_fe, vmax_pi])
-
-    fig, axs = plt.subplots(nb, 3, figsize=(6, 2 * nb))
-    im = None
-    for i in range(nb):
-        for j in [0, 1, 2]:
-            axs[i, j].axis("off")
-        axs[i, 0].imshow(
-            F_d[i], vmin=vmin, vmax=vmax, cmap=my_cmap, origin="lower"
-        )
-        im = axs[i, 1].imshow(
-            _deltaU_fe_d[i], vmin=vmin, vmax=vmax, cmap=my_cmap, origin="lower"
-        )
-        axs[i, 2].imshow(
-            _deltaU_pi_d[i], vmin=vmin, vmax=vmax, cmap=my_cmap, origin="lower"
-        )
-
-    axs[0, 0].set_title("F")
-    axs[0, 1].set_title("-delta (U_fe)")
-    axs[0, 2].set_title("-delta (U_pi)")
-
-    fig.subplots_adjust(right=0.8)
-    cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
-    fig.colorbar(im, cax=cbar_ax)
-
-    plt.show()

@@ -6,7 +6,7 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 import tensorflow as tf
 
-seed = 2023
+seed = 20230920
 random.seed(seed)
 np.random.seed(seed)
 tf.random.set_seed(seed)
@@ -25,6 +25,7 @@ sns.set_context("paper")
 sns.set(rc={"xtick.bottom": True, "ytick.left": True})
 colors = sns.color_palette("mako").as_hex()
 my_cmap = sns.color_palette("viridis", as_cmap=True)
+
 
 pre_laplacian = Derivator_fd(
     [(0, 0), (1, 1)], interval_lenghts=[1, 1], axes=[1, 2]
@@ -162,26 +163,6 @@ class DataLoader:
         self.X_train, self.X_val = separe(X)
         self.Y_train, self.Y_val = separe(Y)
         self.nb_vert = self.X_train.shape[1]
-
-        residues_interior = self.compute_residues(self.X_val, self.Y_val)
-        print("on val data: residues_interior = ", residues_interior.numpy())
-        self.residues_interior_val = residues_interior
-
-    def compute_residues(self, X, Y):
-        F = X[:, :, :, 0] * self.max_norm_F
-        Phi = X[:, :, :, 1]
-        G = X[:, :, :, 2]
-        W = Y[:, :, :, 0]
-        domain = X[:, :, :, -1]
-        laplacian = laplacian_fn(Phi * W + G)
-        error = tf.reduce_mean(
-            ((laplacian + F) ** 2 * domain),
-            axis=[1, 2],
-        )
-        magnitude = tf.reduce_mean(((F) ** 2 * domain), axis=[1, 2])
-        residues_interior = tf.reduce_mean(error / magnitude)
-
-        return residues_interior
 
 
 def test_DataLoader():
@@ -450,7 +431,6 @@ class Agent:
         self.y = tf.Variable(tf.reshape(yy, [-1]))
 
         self.loss_level = loss_level
-        self.best_possible_residues_interior = self.data.residues_interior_val
 
         self.memo_misfit_0_train = []
         self.memo_misfit_0_val = []
@@ -460,9 +440,6 @@ class Agent:
         self.memo_misfit_2_val = []
         self.memo_loss_train = []
         self.memo_loss_val = []
-
-        self.memo_residues_interior_val = []
-
         self.memo_val_steps = []
         self.memo_optimize_misfit = []
 
@@ -479,7 +456,6 @@ class Agent:
 
     def H_loss(self, Y_true, Y_pred, Phi, level, domain, G):
         nb_vert = np.shape(domain)[-1]
-        domain_prop = tf.reduce_sum(domain, axis=[1, 2]) / nb_vert**2
         (
             Y_true_x,
             Y_true_y,
@@ -613,13 +589,11 @@ class Agent:
             domain=self.data.X_val[:, :, :, -1],
             G=self.data.X_val[:, :, :, 2],
         )
-        residues_interior = self.data.compute_residues(self.data.X_val, Y_pred)
         return (
             misfit_0,
             misfit_1,
             misfit_2,
             loss,
-            residues_interior,
         )
 
     @tf.function
@@ -665,7 +639,7 @@ class Agent:
         )
 
     def scheduler(self, epoch, lr, power):
-        return lr * np.exp(-power * epoch)
+        return lr * np.exp(-power * (epoch))
 
     def train(self, epochs):
         try:
@@ -683,13 +657,11 @@ class Agent:
                         misfit_1,
                         misfit_2,
                         loss,
-                        residues_interior,
                     ) = self.validate()
                     self.memo_misfit_0_val.append(misfit_0)
                     self.memo_misfit_1_val.append(misfit_1)
                     self.memo_misfit_2_val.append(misfit_2)
                     self.memo_loss_val.append(loss)
-                    self.memo_residues_interior_val.append(residues_interior)
                     print(
                         f"VAL: step:{i}, l0:{misfit_0:.2e}, l1:{misfit_1:.2e}, l2:{misfit_2:.2e}, L:{loss:.2e}, lr:{self.learning_rate:.4e}"
                     )
@@ -703,19 +675,8 @@ class Agent:
                         )
                         file = open(f"models/best_model/best_epoch.txt", "w")
                         file.write(f"best_epoch = {i+1} \n")
-                        (
-                            best_misfits_0,
-                            best_misfits_1,
-                            best_misfits_2,
-                            best_loss,
-                            best_residues,
-                        ) = (
-                            self.memo_misfit_0_val[-1],
-                            self.memo_misfit_1_val[-1],
-                            self.memo_misfit_2_val[-1],
-                            self.memo_loss_val[-1],
-                            self.memo_residues_interior_val[-1],
-                        )
+
+                        best_loss = self.memo_loss_val[-1]
 
                     else:
                         loss_i = self.memo_loss_val[-1]
@@ -742,6 +703,16 @@ class Agent:
             pass
 
         self.show_curves(level=self.loss_level)
+
+        np.save("./models/misfits_0_train.npy", self.memo_misfit_0_train)
+        np.save("./models/misfits_1_train.npy", self.memo_misfit_1_train)
+        np.save("./models/misfits_2_train.npy", self.memo_misfit_2_train)
+        np.save("./models/loss_train.npy", self.memo_loss_train)
+
+        np.save("./models/misfits_0_val.npy", self.memo_misfit_0_val)
+        np.save("./models/misfits_1_val.npy", self.memo_misfit_1_val)
+        np.save("./models/misfits_2_val.npy", self.memo_misfit_2_val)
+        np.save("./models/loss_val.npy", self.memo_loss_val)
 
     def train_one_epoch(self, misfit_level, i):
         ti0 = time.time()
@@ -780,82 +751,86 @@ class Agent:
         )
 
     def show_curves(self, save=False, i=0, level=2):
-        plt.figure(figsize=(8, 6))
-        plt.plot(
-            self.memo_misfit_0_train, "k", label=r"$\mathcal{L}_0(train)$"
-        )
-        plt.plot(
-            self.memo_val_steps,
-            self.memo_misfit_0_val,
-            ".",
-            color="grey",
-            label=r"$\mathcal{L}_0(val)$",
-        )
+        fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(16, 8), sharey=True)
 
+        ax0.plot(
+            self.memo_misfit_0_train,
+            color="b",
+            label=r"$\mathcal{L}_0(train)$",
+        )
         if level >= 1:
-            plt.plot(
-                self.memo_misfit_1_train, "b", label=r"$\mathcal{L}_1(train)$"
-            )
-            plt.plot(
-                self.memo_val_steps,
-                self.memo_misfit_1_val,
-                ".",
-                color="c",
-                label=r"$\mathcal{L}_1(val)$",
-            )
-
-        if level >= 2:
-            plt.plot(
-                self.memo_misfit_2_train,
+            ax0.plot(
+                self.memo_misfit_1_train,
                 color="purple",
+                label=r"$\mathcal{L}_1(train)$",
+            )
+        if level >= 2:
+            ax0.plot(
+                self.memo_misfit_2_train,
+                "r",
                 label=r"$\mathcal{L}_2(train)$",
             )
-            plt.plot(
-                self.memo_val_steps,
-                self.memo_misfit_2_val,
-                ".",
-                color="mediumpurple",
-                label=r"$\mathcal{L}_2(val)$",
-            )
-
-            handles, labels = plt.gca().get_legend_handles_labels()
-
-            # specify order of items in legend
-            order = [0, 2, 4, 1, 3, 5]
-
-            # add legend to plot
-            plt.legend(
-                [handles[idx] for idx in order],
-                [labels[idx] for idx in order],
-                ncol=2,
-                fontsize=16,
-            )
-
-        plt.xlabel("Epochs", fontsize=16)
-        plt.yscale("log")
-        plt.title(r"Evolution of the $\mathcal{L}_i$", fontsize=16)
-        plt.tight_layout()
-        if save:
-            plt.savefig(f"./models/plots/misfits_{i}.png")
-        plt.show()
-
-        plt.figure(figsize=(8, 6))
-        plt.plot(
+        ax0.plot(
             self.memo_loss_train,
-            "b",
+            linestyle=(0, (5, 8)),
+            color="k",
+            alpha=0.6,
             label=r"$\mathcal{L}(train)$",
         )
-        plt.plot(
+        ax0.legend(
+            ncol=2,
+            fontsize=16,
+        )
+
+        ax0.set_xlabel("Epochs", fontsize=16)
+        ax0.set_yscale("log")
+        ax0.set_title(
+            r"Evolution of $\mathcal{L}$ and $\mathcal{L}_i$ on the training set",
+            fontsize=16,
+        )
+
+        ax1.plot(
+            self.memo_val_steps,
+            self.memo_misfit_0_val,
+            "-+",
+            color="b",
+            label=r"$\mathcal{L}_0(val)$",
+        )
+        if level >= 1:
+            ax1.plot(
+                self.memo_val_steps,
+                self.memo_misfit_1_val,
+                "-+",
+                color="purple",
+                label=r"$\mathcal{L}_1(val)$",
+            )
+        if level >= 2:
+            ax1.plot(
+                self.memo_val_steps,
+                self.memo_misfit_2_val,
+                "-+",
+                color="r",
+                label=r"$\mathcal{L}_2(val)$",
+            )
+        ax1.plot(
             self.memo_val_steps,
             self.memo_loss_val,
-            "-+",
-            color="c",
+            linestyle=(0, (5, 8)),
+            marker="+",
+            color="k",
+            alpha=0.6,
             label=r"$\mathcal{L}(val)$",
         )
-        plt.title(r"Evolution of $\mathcal{L}$", fontsize=16)
-        plt.yscale("log")
-        plt.xlabel("Epochs", fontsize=16)
-        plt.legend(fontsize=16)
+        ax1.set_xlabel("Epochs", fontsize=16)
+        ax1.set_title(
+            r"Evolution of $\mathcal{L}$ and $\mathcal{L}_i$ on the validation set",
+            fontsize=16,
+        )
+        ax1.legend(
+            ncol=2,
+            fontsize=16,
+        )
+
         plt.tight_layout()
         if save:
             plt.savefig(f"./models/plots/loss_{i}.png")

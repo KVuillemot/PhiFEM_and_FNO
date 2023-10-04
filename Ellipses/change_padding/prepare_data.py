@@ -161,6 +161,7 @@ def create_FG_numpy(nb_data, nb_vert):
     beta = np.random.uniform(-0.8, 0.8, size=[nb_data, 1])
 
     x_0 = np.random.uniform(0.2, 0.8, size=[nb_data, 1])
+    print(np.shape(x_0))
     y_0 = np.random.uniform(0.2, 0.8, size=[nb_data, 1])
     lx = np.random.uniform(0.2, 0.45, size=[nb_data, 1])
     ly = np.random.uniform(0.2, 0.45, size=[nb_data, 1])
@@ -230,6 +231,3 @@ def test():
 
 if __name__ == "__main__":
     test()
-
-    for i in range(15):
-        test_F()
