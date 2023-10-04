@@ -278,7 +278,7 @@ def go():
     save = True
     add_to_existing = False
     nb_vert = 64
-    nb_data = 10000
+    nb_data = 500
     n_mode = 4
 
     ti0 = time.time()
