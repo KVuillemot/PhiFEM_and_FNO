@@ -787,7 +787,7 @@ class Agent:
                 print(
                     f"{self.scheduler.patience = } {self.scheduler._last_lr[-1] = :.3e}"
                 )
-            if epoch % 1 == 0:
+            if epoch % 10 == 0:
                 mean_loss_validation = self.eval_losses()
                 if mean_loss_validation <= best_mean_loss_validation:
                     best_mean_loss_validation = mean_loss_validation
@@ -814,9 +814,7 @@ class Agent:
                     file.write(f"loss = {best_mean_loss_validation:.2e} \n")
                     file.write(f"{self.losses_dict[-1]} \n")
                     file.close()
-                print(f"{self.losses_dict[-1]}")
 
-            if epoch % 10 == 0:
                 if save_models:
                     torch.save(
                         {
@@ -827,6 +825,7 @@ class Agent:
                         f"./{models_repo}/model_{epoch}.pkl",
                     )
 
+                print(f"{self.losses_dict[-1]}")
             np.save(f"{models_repo}/losses_array.npy", np.array(self.losses_array))
 
     def plot_losses(self, models_repo="./models", save=True):
@@ -848,28 +847,28 @@ class Agent:
                 best_epoch = int(y)
         best_epoch_index = list(epochs).index(best_epoch)
         fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(16, 8), sharey=True)
-        indices_to_plot = list(range(0, len(epochs), 5))
+
         ax0.plot(
-            epochs[indices_to_plot],
-            list_loss_0_train[indices_to_plot],
+            epochs,
+            list_loss_0_train,
             color="b",
             label=r"$\mathcal{L}_0(train)$",
         )
         ax0.plot(
-            epochs[indices_to_plot],
-            list_loss_1_train[indices_to_plot],
+            epochs,
+            list_loss_1_train,
             color="purple",
             label=r"$\mathcal{L}_1(train)$",
         )
         ax0.plot(
-            epochs[indices_to_plot],
-            list_loss_2_train[indices_to_plot],
+            epochs,
+            list_loss_2_train,
             "r",
             label=r"$\mathcal{L}_2(train)$",
         )
         ax0.plot(
-            epochs[indices_to_plot],
-            list_loss_train[indices_to_plot],
+            epochs,
+            list_loss_train,
             linestyle=(0, (5, 8)),
             color="k",
             alpha=0.6,
@@ -918,26 +917,26 @@ class Agent:
         )
 
         ax1.plot(
-            epochs[indices_to_plot],
-            list_loss_0_val[indices_to_plot],
+            epochs,
+            list_loss_0_val,
             color="b",
             label=r"$\mathcal{L}_0(val)$",
         )
         ax1.plot(
-            epochs[indices_to_plot],
-            list_loss_1_val[indices_to_plot],
+            epochs,
+            list_loss_1_val,
             color="purple",
             label=r"$\mathcal{L}_1(val)$",
         )
         ax1.plot(
-            epochs[indices_to_plot],
-            list_loss_2_val[indices_to_plot],
+            epochs,
+            list_loss_2_val,
             color="r",
             label=r"$\mathcal{L}_2(val)$",
         )
         ax1.plot(
-            epochs[indices_to_plot],
-            list_loss_val[indices_to_plot],
+            epochs,
+            list_loss_val,
             linestyle=(0, (5, 8)),
             color="k",
             alpha=0.8,
@@ -988,26 +987,18 @@ class Agent:
         if not (os.path.exists("./images")) and save:
             os.makedirs("./images")
         if save:
-            # plt.savefig(f"./images/losses.png")
+            plt.savefig(f"./images/losses.png")
             plt.savefig(f"./{models_repo}/losses.png")
         # plt.show()
 
 
 if __name__ == "__main__":
+    test_domain_and_border()
+    test_data()
     data = DataLoader(False)
 
     training_agent = Agent(
-        data,
-        level=0,
-        relative=True,
-        squared=False,
-        initial_lr=5e-3,
-        n_modes=10,
-        width=20,
-        batch_size=32,
-        pad_prop=0.05,
-        pad_mode="reflect",
-        l2_lambda=1e-3,
+        data, level=2, pad_prop=0.05, pad_mode="reflect", l2_lambda=5e-3
     )
     print(
         f"(level, relative, squared, initial_lr, n_modes, width, batch_size, l2_lambda, pad_prop, pad_mode) = "
@@ -1015,64 +1006,10 @@ if __name__ == "__main__":
     )
     nb_epochs = 2000
     start_training = time.time()
-    training_agent.train(nb_epochs, models_repo="./models_l2")
+    training_agent.train(nb_epochs, models_repo="./models")
     end_training = time.time()
     time_training = end_training - start_training
     print(
         f"Total time to train the operator : {time_training:.3f}s. Average time : {time_training/nb_epochs:.3f}s."
     )
-    training_agent.plot_losses(models_repo="./models_l2")  # models_repo=repos[i])
-
-    training_agent = Agent(
-        data,
-        level=1,
-        relative=True,
-        squared=False,
-        initial_lr=5e-3,
-        n_modes=10,
-        width=20,
-        batch_size=32,
-        pad_prop=0.05,
-        pad_mode="reflect",
-        l2_lambda=1e-3,
-    )
-    print(
-        f"(level, relative, squared, initial_lr, n_modes, width, batch_size, l2_lambda, pad_prop, pad_mode) = "
-        + f"{(training_agent.level, training_agent.relative, training_agent.squared, training_agent.initial_lr, training_agent.n_modes, training_agent.width, training_agent.batch_size, training_agent.l2_lambda, training_agent.pad_prop, training_agent.pad_mode)} \n"
-    )
-    nb_epochs = 2000
-    start_training = time.time()
-    training_agent.train(nb_epochs, models_repo="./models_H1")
-    end_training = time.time()
-    time_training = end_training - start_training
-    print(
-        f"Total time to train the operator : {time_training:.3f}s. Average time : {time_training/nb_epochs:.3f}s."
-    )
-    training_agent.plot_losses(models_repo="./models_H1")  # models_repo=repos[i])
-
-    training_agent = Agent(
-        data,
-        level=2,
-        relative=True,
-        squared=False,
-        initial_lr=5e-3,
-        n_modes=10,
-        width=20,
-        batch_size=32,
-        pad_prop=0.05,
-        pad_mode="reflect",
-        l2_lambda=1e-3,
-    )
-    print(
-        f"(level, relative, squared, initial_lr, n_modes, width, batch_size, l2_lambda, pad_prop, pad_mode) = "
-        + f"{(training_agent.level, training_agent.relative, training_agent.squared, training_agent.initial_lr, training_agent.n_modes, training_agent.width, training_agent.batch_size, training_agent.l2_lambda, training_agent.pad_prop, training_agent.pad_mode)} \n"
-    )
-    nb_epochs = 2000
-    start_training = time.time()
-    training_agent.train(nb_epochs, models_repo="./models_H2")
-    end_training = time.time()
-    time_training = end_training - start_training
-    print(
-        f"Total time to train the operator : {time_training:.3f}s. Average time : {time_training/nb_epochs:.3f}s."
-    )
-    training_agent.plot_losses(models_repo="./models_H2")  # models_repo=repos[i])
+    training_agent.plot_losses(models_repo="./models")  # models_repo=repos[i])

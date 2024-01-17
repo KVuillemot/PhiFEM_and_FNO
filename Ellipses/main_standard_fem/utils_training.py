@@ -28,75 +28,6 @@ colors = sns.color_palette("mako").as_hex()
 my_cmap = sns.color_palette("viridis", as_cmap=True)
 
 
-def test_domain_and_border():
-    """
-    Test function for domain_and_border.
-
-    Loads a phi tensor from file and computes domain and boundary tensors.
-    Displays visualizations of the domain and boundaries.
-    """
-    phi = torch.tensor(np.load("../data/Phi.npy"), dtype=torch.float32)[None, 20, :, :]
-    tmp_loss = Loss()
-    domain, domain_1, domain_2 = tmp_loss.compute_boundaries(phi, 2)
-    domain, domain_1, domain_2 = (
-        domain.int().numpy()[0, :, :],
-        domain_1.int().numpy()[0, :, :],
-        domain_2.int().numpy()[0, :, :],
-    )
-    plt.figure(figsize=(6, 6))
-    plt.imshow(domain + domain_1 + domain_2, cmap="viridis", origin="lower")
-    plt.colorbar()
-    plt.grid(False)
-    plt.tight_layout()
-    plt.show()
-
-
-def test_data():
-    """
-    Test function for loading and visualizing data.
-
-    Loads tensors F, Phi, G, and W from file and displays visualizations.
-    """
-
-    phi = torch.tensor(np.load("../data/Phi.npy"), dtype=torch.float32)[10]
-    F = torch.tensor(np.load("../data/F.npy"), dtype=torch.float32)[10]
-    W = torch.tensor(np.load("../data/W.npy"), dtype=torch.float32)[10]
-    G = torch.tensor(np.load("../data/G.npy"), dtype=torch.float32)[10]
-
-    domain, boundary = domain_and_border(phi.shape[0], phi)
-    plt.figure(figsize=(9, 6))
-    plt.subplot(2, 3, 1)
-    plt.imshow(domain, cmap=my_cmap, origin="lower")
-    plt.colorbar(shrink=0.6)
-    plt.grid(False)
-    plt.subplot(2, 3, 2)
-    plt.imshow(boundary, cmap=my_cmap, origin="lower")
-    plt.colorbar(shrink=0.6)
-    plt.grid(False)
-    plt.subplot(2, 3, 3)
-    plt.imshow(F * domain, cmap=my_cmap, origin="lower")
-    plt.colorbar(shrink=0.6)
-    plt.title("F")
-    plt.grid(False)
-    plt.subplot(2, 3, 4)
-    plt.imshow(G * domain, cmap=my_cmap, origin="lower")
-    plt.colorbar(shrink=0.6)
-    plt.title("G")
-    plt.grid(False)
-    plt.subplot(2, 3, 5)
-    plt.imshow(W * domain, cmap=my_cmap, origin="lower")
-    plt.colorbar(shrink=0.6)
-    plt.title("W")
-    plt.grid(False)
-    plt.subplot(2, 3, 6)
-    plt.imshow((W * phi + G) * domain, cmap=my_cmap, origin="lower")
-    plt.colorbar(shrink=0.6)
-    plt.title("U")
-    plt.grid(False)
-    plt.tight_layout()
-    plt.show()
-
-
 class UnitGaussianNormalizer(object):
     """
     Class for normalizing and denormalizing tensors using unit Gaussian normalization.
@@ -171,7 +102,7 @@ class DataLoader:
             np.load(f"../data/G.npy"),
             dtype=dtype,
         )
-        Y = torch.tensor(np.load(f"../data/W.npy"), dtype=dtype)[:, None, :, :]
+        Y = torch.tensor(np.load(f"../data/U.npy"), dtype=dtype)[:, None, :, :]
 
         if small_data:
             data_size = 300
@@ -717,7 +648,7 @@ class Agent:
                 y_pred,
                 y_true,
                 mode="val",
-                level=2,
+                level=self.level,
                 relative=True,
                 squared=False,
             )
@@ -732,7 +663,7 @@ class Agent:
                 y_pred,
                 y_true,
                 mode="val",
-                level=2,
+                level=self.level,
                 relative=True,
                 squared=False,
             )
@@ -988,13 +919,14 @@ class Agent:
         if not (os.path.exists("./images")) and save:
             os.makedirs("./images")
         if save:
-            # plt.savefig(f"./images/losses.png")
+            plt.savefig(f"./images/losses.png")
             plt.savefig(f"./{models_repo}/losses.png")
-        # plt.show()
+        plt.show()
 
 
 if __name__ == "__main__":
     data = DataLoader(False)
+    # {'level': 2, 'relative': True, 'squared': False, 'initial_lr': 0.001, 'n_modes': 25, 'width': 16, 'batch_size': 32, 'l2_lambda': 1e-05, 'pad_prop': 0.05, 'pad_mode': 'constant', 'nb_layers': 4, 'activation': 'gelu', 'essaie': 1}
 
     training_agent = Agent(
         data,
@@ -1022,57 +954,3 @@ if __name__ == "__main__":
         f"Total time to train the operator : {time_training:.3f}s. Average time : {time_training/nb_epochs:.3f}s."
     )
     training_agent.plot_losses(models_repo="./models_l2")  # models_repo=repos[i])
-
-    training_agent = Agent(
-        data,
-        level=1,
-        relative=True,
-        squared=False,
-        initial_lr=5e-3,
-        n_modes=10,
-        width=20,
-        batch_size=32,
-        pad_prop=0.05,
-        pad_mode="reflect",
-        l2_lambda=1e-3,
-    )
-    print(
-        f"(level, relative, squared, initial_lr, n_modes, width, batch_size, l2_lambda, pad_prop, pad_mode) = "
-        + f"{(training_agent.level, training_agent.relative, training_agent.squared, training_agent.initial_lr, training_agent.n_modes, training_agent.width, training_agent.batch_size, training_agent.l2_lambda, training_agent.pad_prop, training_agent.pad_mode)} \n"
-    )
-    nb_epochs = 2000
-    start_training = time.time()
-    training_agent.train(nb_epochs, models_repo="./models_H1")
-    end_training = time.time()
-    time_training = end_training - start_training
-    print(
-        f"Total time to train the operator : {time_training:.3f}s. Average time : {time_training/nb_epochs:.3f}s."
-    )
-    training_agent.plot_losses(models_repo="./models_H1")  # models_repo=repos[i])
-
-    training_agent = Agent(
-        data,
-        level=2,
-        relative=True,
-        squared=False,
-        initial_lr=5e-3,
-        n_modes=10,
-        width=20,
-        batch_size=32,
-        pad_prop=0.05,
-        pad_mode="reflect",
-        l2_lambda=1e-3,
-    )
-    print(
-        f"(level, relative, squared, initial_lr, n_modes, width, batch_size, l2_lambda, pad_prop, pad_mode) = "
-        + f"{(training_agent.level, training_agent.relative, training_agent.squared, training_agent.initial_lr, training_agent.n_modes, training_agent.width, training_agent.batch_size, training_agent.l2_lambda, training_agent.pad_prop, training_agent.pad_mode)} \n"
-    )
-    nb_epochs = 2000
-    start_training = time.time()
-    training_agent.train(nb_epochs, models_repo="./models_H2")
-    end_training = time.time()
-    time_training = end_training - start_training
-    print(
-        f"Total time to train the operator : {time_training:.3f}s. Average time : {time_training/nb_epochs:.3f}s."
-    )
-    training_agent.plot_losses(models_repo="./models_H2")  # models_repo=repos[i])

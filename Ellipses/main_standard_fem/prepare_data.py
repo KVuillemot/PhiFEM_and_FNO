@@ -153,7 +153,6 @@ def create_FG_numpy(nb_data, nb_vert):
     sigma_x = np.random.uniform(0.15, 0.45, size=[nb_data, 1])
     sigma_y = np.random.uniform(0.15, 0.45, size=[nb_data, 1])
     amplitude = np.reshape(np.repeat(25, nb_data), (nb_data, 1))
-    # amplitude = np.random.uniform(20, 30, size=[nb_data, 1])
     alpha = np.random.uniform(-0.8, 0.8, size=[nb_data, 1])
     beta = np.random.uniform(-0.8, 0.8, size=[nb_data, 1])
 
@@ -193,7 +192,7 @@ def create_FG_numpy(nb_data, nb_vert):
             theta[n][0],
         )
         mmu0, mmu1 = mu0[n][0], mu1[n][0]
-        while eval_phi(mmu0, mmu1, xx_0, yy_0, llx, lly, ttheta) > -0.15:
+        while eval_phi(mmu0, mmu1, xx_0, yy_0, llx, lly, ttheta) > -0.1:
             mu0[n][0] = np.random.uniform(0.2, 0.8, size=[1])[0]
             mu1[n][0] = np.random.uniform(0.2, 0.8, size=[1])[0]
             mmu0, mmu1 = mu0[n][0], mu1[n][0]

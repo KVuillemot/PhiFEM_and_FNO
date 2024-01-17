@@ -353,14 +353,14 @@ def go():
     plt.show()
 
     if save:
-        if not (os.path.exists(f"../data")):
-            os.makedirs(f"../data")
-        if add_to_existing and os.path.exists(f"../data/F.npy"):
-            F_old = np.load(f"../data/F.npy")
-            G_old = np.load(f"../data/G.npy")
-            Phi_old = np.load(f"../data/Phi.npy")
-            params_old = np.load(f"../data/agentParams.npy")
-            W_old = np.load(f"../data/W.npy")
+        if not (os.path.exists(f"../data_1800")):
+            os.makedirs(f"../data_1800")
+        if add_to_existing and os.path.exists(f"../data_1800/F.npy"):
+            F_old = np.load(f"../data_1800/F.npy")
+            G_old = np.load(f"../data_1800/G.npy")
+            Phi_old = np.load(f"../data_1800/Phi.npy")
+            params_old = np.load(f"../data_1800/agentParams.npy")
+            W_old = np.load(f"../data_1800/W.npy")
             F = np.concatenate([F_old, F])
             G = np.concatenate([G_old, G])
             phi = np.concatenate([Phi_old, phi])
@@ -368,14 +368,14 @@ def go():
             W = np.concatenate([W_old, W])
 
         print("Save F,G,agentParams,W, nb_Data=", len(F))
-        np.save(f"../data/F.npy", F)
-        np.save(f"../data/G.npy", G)
-        np.save(f"../data/Phi.npy", phi)
+        np.save(f"../data_1800/F.npy", F)
+        np.save(f"../data_1800/G.npy", G)
+        np.save(f"../data_1800/Phi.npy", phi)
         np.save(
-            f"../data/agentParams.npy",
+            f"../data_1800/agentParams.npy",
             params,
         )
-        np.save(f"../data/W.npy", W)
+        np.save(f"../data_1800/W.npy", W)
 
 
 if __name__ == "__main__":

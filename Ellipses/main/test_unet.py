@@ -222,266 +222,116 @@ def test_DataLoader():
     print("Y_val", data.Y_val.shape)
 
 
-class SpectralConv2d(nn.Module):
-    """
-    SpectralConv2d: Complex-valued 2D convolutional layer using spectral convolution.
+class DoubleConv(nn.Module):
+    """(convolution => [BN] => ReLU) * 2"""
 
-    This layer applies a 2D convolution in the frequency domain using complex-valued weights.
-    The weights are parameterized by complex-valued tensors and are used to perform spectral
-    convolution via element-wise multiplication in the Fourier space.
-
-    Args:
-        in_channels (int): Number of input channels.
-        out_channels (int): Number of output channels.
-        modes (int): Number of Fourier modes used for the convolution.
-
-    Attributes:
-        in_channels (int): Number of input channels.
-        out_channels (int): Number of output channels.
-        modes (int): Number of Fourier modes used for the convolution.
-        scale (float): Scaling factor for the weights initialization.
-        weights1 (nn.Parameter): Learnable complex-valued weights for the first convolution.
-        weights2 (nn.Parameter): Learnable complex-valued weights for the second convolution.
-
-    Methods:
-        compl_mul2d(input, weights):
-            Perform complex multiplication of 2D tensors.
-
-        forward(x):
-            Forward pass of the spectral convolution layer.
-
-    """
-
-    def __init__(self, in_channels, out_channels, modes):
-        """
-        Initializes the SpectralConv2d layer.
-
-        Args:
-            in_channels (int): Number of input channels.
-            out_channels (int): Number of output channels.
-            modes (int): Number of Fourier modes used for the convolution.
-        """
-        super(SpectralConv2d, self).__init__()
-
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.modes = modes
-        self.scale = 1 / (in_channels * out_channels)
-        self.weights1 = nn.Parameter(
-            self.scale
-            * torch.rand(
-                self.in_channels,
-                self.out_channels,
-                self.modes,
-                self.modes,
-                dtype=torch.cfloat,
-            )
+    def __init__(self, in_channels, out_channels, mid_channels=None):
+        super().__init__()
+        if not mid_channels:
+            mid_channels = out_channels
+        self.double_conv = nn.Sequential(
+            nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(mid_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
         )
-        self.weights2 = nn.Parameter(
-            self.scale
-            * torch.rand(
-                self.in_channels,
-                self.out_channels,
-                self.modes,
-                self.modes,
-                dtype=torch.cfloat,
-            )
-        )
-
-    def compl_mul2d(self, input, weights):
-        """
-        Perform complex multiplication of 2D tensors.
-
-        Args:
-            input (torch.Tensor): Input tensor with shape (batch, in_channel, x, y).
-            weights (nn.Parameter): Complex-valued weights with shape
-                                   (in_channel, out_channel, x, y).
-
-        Returns:
-            torch.Tensor: Result of complex multiplication with shape
-                          (batch, out_channel, x, y).
-        """
-        # (batch, in_channel, x,y ), (in_channel, out_channel, x,y) -> (batch, out_channel, x,y)
-        return torch.einsum("bixy,ioxy->boxy", input, weights)
 
     def forward(self, x):
-        """
-        Forward pass of the spectral convolution layer.
+        return self.double_conv(x)
 
-        Args:
-            x (torch.Tensor): Input tensor with shape (batch, in_channel, x, y).
 
-        Returns:
-            torch.Tensor: Output tensor after spectral convolution with shape
-                          (batch, out_channel, x, y).
-        """
+class Down(nn.Module):
+    """Downscaling with maxpool then double conv"""
 
-        batchsize = x.shape[0]
-
-        x_ft = torch.fft.rfft2(x)
-
-        factor1 = self.compl_mul2d(
-            x_ft[:, :, : self.modes, : self.modes],
-            self.weights1,
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.maxpool_conv = nn.Sequential(
+            nn.MaxPool2d(2), DoubleConv(in_channels, out_channels)
         )
-        factor2 = self.compl_mul2d(
-            x_ft[:, :, -self.modes :, : self.modes],
-            self.weights2,
-        )
-        # Multiply relevant Fourier modes
-        out_ft = torch.zeros(
-            batchsize,
-            self.out_channels,
-            x.size(-2),
-            x.size(-1) // 2 + 1,
-            dtype=torch.cfloat,
-            device=x.device,
-        )
-        out_ft[:, :, : self.modes, : self.modes] = factor1
-        out_ft[:, :, -self.modes :, : self.modes] = factor2
 
-        # Return to physical space
-        x = torch.fft.irfft2(out_ft, s=(x.size(-2), x.size(-1)))
+    def forward(self, x):
+        return self.maxpool_conv(x)
+
+
+class Up(nn.Module):
+    """Upscaling then double conv"""
+
+    def __init__(self, in_channels, out_channels, bilinear=True):
+        super().__init__()
+
+        # if bilinear, use the normal convolutions to reduce the number of channels
+        if bilinear:
+            self.up = nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
+            self.conv = DoubleConv(in_channels, out_channels, in_channels // 2)
+        else:
+            self.up = nn.ConvTranspose2d(
+                in_channels, in_channels // 2, kernel_size=2, stride=2
+            )
+            self.conv = DoubleConv(in_channels, out_channels)
+
+    def forward(self, x1, x2):
+        x1 = self.up(x1)
+        # input is CHW
+        diffY = x2.size()[2] - x1.size()[2]
+        diffX = x2.size()[3] - x1.size()[3]
+
+        x1 = F.pad(x1, [diffX // 2, diffX - diffX // 2, diffY // 2, diffY - diffY // 2])
+        x = torch.cat([x2, x1], dim=1)
+        return self.conv(x)
+
+
+class OutConv(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(OutConv, self).__init__()
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=1)
+
+    def forward(self, x):
+        return self.conv(x)
+
+
+class UNet(nn.Module):
+    def __init__(self, n_channels=5, n_classes=1, bilinear=False):
+        super(UNet, self).__init__()
+        self.n_channels = n_channels
+        self.n_classes = n_classes
+        self.bilinear = bilinear
+
+        self.inc = nn.Conv2d(self.n_channels, 32, 1)
+        self.down1 = Down(32, 64)
+        self.down2 = Down(64, 128)
+        self.down3 = Down(128, 256)
+        factor = 2 if bilinear else 1
+        self.down4 = Down(256, 512 // factor)
+        self.up1 = Up(512, 256 // factor, bilinear)
+        self.up2 = Up(256, 128 // factor, bilinear)
+        self.up3 = Up(128, 64 // factor, bilinear)
+        self.up4 = Up(64, 32, bilinear)
+        self.outc = nn.Conv2d(32, self.n_classes, 1)
+
+    def forward(self, x):
+        grid = self.get_grid(x.shape, x.device)
+        x = torch.cat((x, grid), dim=1)
+        x1 = self.inc(x)
+        x2 = self.down1(x1)
+        x3 = self.down2(x2)
+        x4 = self.down3(x3)
+        x5 = self.down4(x4)
+        x = self.up1(x5, x4)
+        x = self.up2(x, x3)
+        x = self.up3(x, x2)
+        x = self.up4(x, x1)
+        x = self.outc(x)
         return x
 
-
-class FNO2dLayer(nn.Module):
-    def __init__(self, conv, bias):
-        super(FNO2dLayer, self).__init__()
-
-        self.conv = conv
-        self.bias = bias
-
-    def forward(self, x):
-        x1 = self.conv(x)
-        x2 = self.bias(x)
-        return x1 + x2
-
-
-class FNO2d(nn.Module):
-    """
-    FNO2d: Neural network for solving partial differential equations (PDEs) using Fourier Neural Operators in 2D.
-
-    This network consists of multiple layers, each comprising a spectral convolution (SpectralConv2d)
-    followed by a bias term (nn.Conv2d), with activation functions applied in between.
-    The architecture is designed for solving PDEs on 2D domains.
-
-    Args:
-        in_channels (int): Number of input channels.
-        modes (int): Number of Fourier modes to consider.
-        width (int): Width of the network layers.
-        pad_prop (float): Proportion of padding to be applied to the input.
-        nb_layers (int): Number of layers in the network.
-        pad_mode (str): Padding mode for convolutional layers.
-        activation (str): Activation function to be used. Supported options: 'relu', 'tanh', 'elu', 'gelu'.
-    """
-
-    def __init__(
-        self,
-        in_channels,
-        modes,
-        width,
-        pad_prop=0.05,
-        nb_layers=4,
-        pad_mode="reflect",
-        activation="gelu",
-    ):
-        super(FNO2d, self).__init__()
-
-        self.modes = modes
-        self.width = width
-        self.pad_prop = pad_prop
-        self.pad_mode = pad_mode
-        assert (
-            self.pad_mode == "reflect"
-            or self.pad_mode == "constant"
-            or self.pad_mode == "replicate"
-            or self.pad_mode == "one_side_reflect"
-        )
-        if activation == "relu":
-            self.activation = F.relu
-        elif activation == "tanh":
-            self.activation = F.tanh
-        elif activation == "elu":
-            self.activation = F.elu
-        elif activation == "gelu":
-            self.activation = F.gelu
-        else:
-            raise Exception(f"activation function:{activation} not allowed")
-        self.in_channels = in_channels
-        self.fc0 = nn.Conv2d(
-            in_channels + 2, self.width, 1
-        )  # input channel is 5: (f(x,y), phi(x,y), g(x,y), x, y)
-        self.nb_layers = nb_layers
-
-        self.layers = nn.ModuleList()
-        for i in range(self.nb_layers):
-            self.layers.append(
-                FNO2dLayer(
-                    SpectralConv2d(self.width, self.width, self.modes),
-                    nn.Conv2d(self.width, self.width, 1),
-                )
-            )
-
-        self.fc1 = nn.Conv2d(self.width, 128, 1)
-        self.fc2 = nn.Conv2d(128, 1, 1)
-
     def get_grid(self, shape, device):
-        """
-        Generate a grid of coordinates based on the input shape.
-
-        Args:
-            shape (torch.Size): Shape of the input tensor.
-            device (torch.device): Device on which the grid tensor should be created.
-
-        Returns:
-            torch.Tensor: Grid tensor with coordinates.
-        """
         batchsize, size_x, size_y = shape[0], shape[2], shape[3]
         gridx = torch.tensor(np.linspace(0, 1, size_x), dtype=torch.float)
         gridx = gridx.reshape(1, 1, size_x, 1).repeat([batchsize, 1, 1, size_y])
         gridy = torch.tensor(np.linspace(0, 1, size_y), dtype=torch.float)
         gridy = gridy.reshape(1, 1, 1, size_y).repeat([batchsize, 1, size_x, 1])
         return torch.cat((gridx, gridy), dim=1).to(device)
-
-    def forward(self, x):
-        """
-        Forward pass of the FNO2d network.
-
-        Args:
-            x (torch.Tensor): Input tensor.
-
-        Returns:
-            torch.Tensor: Output tensor after passing through the network.
-        """
-        self.padding = int(x.shape[2] * self.pad_prop)
-        grid = self.get_grid(x.shape, x.device)
-        x = torch.cat((x, grid), dim=1)
-        x = self.fc0(x)
-        if self.padding != 0 and self.pad_mode != "one_side_reflect":
-            x = F.pad(
-                x,
-                [self.padding, self.padding, self.padding, self.padding],
-                mode=self.pad_mode,
-            )
-        elif self.padding != 0 and self.pad_mode == "one_side_reflect":
-            x = F.pad(
-                x,
-                [0, self.padding, 0, self.padding],
-                mode="reflect",
-            )
-        for i in range(self.nb_layers):
-            x = self.layers[i](x)
-            if i < self.nb_layers - 1:
-                x = self.activation(x)
-        if self.padding != 0 and self.pad_mode != "one_side_reflect":
-            x = x[..., self.padding : -self.padding, self.padding : -self.padding]
-        elif self.padding != 0 and self.pad_mode == "one_side_reflect":
-            x = x[..., : -self.padding, : -self.padding]
-        x = self.fc1(x)
-        x = self.activation(x)
-        x = self.fc2(x)
-        return x
 
 
 def count_params(model):
@@ -600,15 +450,15 @@ class Agent:
         self.nb_train_data = self.X_train.shape[0]
         self.nb_val_data = self.X_val.shape[0]
 
-        self.model = FNO2d(
-            in_channels,
-            modes=self.n_modes,
-            width=self.width,
-            pad_prop=self.pad_prop,
-            pad_mode=self.pad_mode,
-            nb_layers=self.nb_layers,
-            activation=self.activation,
-        ).to(self.device)
+        self.model = UNet().to(self.device)
+        #     in_channels,
+        #     modes=self.n_modes,
+        #     width=self.width,
+        #     pad_prop=self.pad_prop,
+        #     pad_mode=self.pad_mode,
+        #     nb_layers=self.nb_layers,
+        #     activation=self.activation,
+        # ).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), self.initial_lr)
         self.scheduler = ReduceLROnPlateau_perso(
             self.optimizer,
@@ -717,7 +567,7 @@ class Agent:
                 y_pred,
                 y_true,
                 mode="val",
-                level=2,
+                level=self.level,
                 relative=True,
                 squared=False,
             )
@@ -732,7 +582,7 @@ class Agent:
                 y_pred,
                 y_true,
                 mode="val",
-                level=2,
+                level=self.level,
                 relative=True,
                 squared=False,
             )
@@ -990,18 +840,21 @@ class Agent:
         if save:
             # plt.savefig(f"./images/losses.png")
             plt.savefig(f"./{models_repo}/losses.png")
-        # plt.show()
+        plt.show()
 
 
 if __name__ == "__main__":
+    test_domain_and_border()
+    test_data()
     data = DataLoader(False)
+    # {'level': 2, 'relative': True, 'squared': False, 'initial_lr': 0.001, 'n_modes': 25, 'width': 16, 'batch_size': 32, 'l2_lambda': 1e-05, 'pad_prop': 0.05, 'pad_mode': 'constant', 'nb_layers': 4, 'activation': 'gelu', 'essaie': 1}
 
     training_agent = Agent(
         data,
         level=0,
         relative=True,
         squared=False,
-        initial_lr=5e-3,
+        initial_lr=1e-3,
         n_modes=10,
         width=20,
         batch_size=32,
@@ -1015,64 +868,10 @@ if __name__ == "__main__":
     )
     nb_epochs = 2000
     start_training = time.time()
-    training_agent.train(nb_epochs, models_repo="./models_l2")
+    training_agent.train(nb_epochs, models_repo="./models_unet")
     end_training = time.time()
     time_training = end_training - start_training
     print(
         f"Total time to train the operator : {time_training:.3f}s. Average time : {time_training/nb_epochs:.3f}s."
     )
-    training_agent.plot_losses(models_repo="./models_l2")  # models_repo=repos[i])
-
-    training_agent = Agent(
-        data,
-        level=1,
-        relative=True,
-        squared=False,
-        initial_lr=5e-3,
-        n_modes=10,
-        width=20,
-        batch_size=32,
-        pad_prop=0.05,
-        pad_mode="reflect",
-        l2_lambda=1e-3,
-    )
-    print(
-        f"(level, relative, squared, initial_lr, n_modes, width, batch_size, l2_lambda, pad_prop, pad_mode) = "
-        + f"{(training_agent.level, training_agent.relative, training_agent.squared, training_agent.initial_lr, training_agent.n_modes, training_agent.width, training_agent.batch_size, training_agent.l2_lambda, training_agent.pad_prop, training_agent.pad_mode)} \n"
-    )
-    nb_epochs = 2000
-    start_training = time.time()
-    training_agent.train(nb_epochs, models_repo="./models_H1")
-    end_training = time.time()
-    time_training = end_training - start_training
-    print(
-        f"Total time to train the operator : {time_training:.3f}s. Average time : {time_training/nb_epochs:.3f}s."
-    )
-    training_agent.plot_losses(models_repo="./models_H1")  # models_repo=repos[i])
-
-    training_agent = Agent(
-        data,
-        level=2,
-        relative=True,
-        squared=False,
-        initial_lr=5e-3,
-        n_modes=10,
-        width=20,
-        batch_size=32,
-        pad_prop=0.05,
-        pad_mode="reflect",
-        l2_lambda=1e-3,
-    )
-    print(
-        f"(level, relative, squared, initial_lr, n_modes, width, batch_size, l2_lambda, pad_prop, pad_mode) = "
-        + f"{(training_agent.level, training_agent.relative, training_agent.squared, training_agent.initial_lr, training_agent.n_modes, training_agent.width, training_agent.batch_size, training_agent.l2_lambda, training_agent.pad_prop, training_agent.pad_mode)} \n"
-    )
-    nb_epochs = 2000
-    start_training = time.time()
-    training_agent.train(nb_epochs, models_repo="./models_H2")
-    end_training = time.time()
-    time_training = end_training - start_training
-    print(
-        f"Total time to train the operator : {time_training:.3f}s. Average time : {time_training/nb_epochs:.3f}s."
-    )
-    training_agent.plot_losses(models_repo="./models_H2")  # models_repo=repos[i])
+    training_agent.plot_losses(models_repo="./models_unet")  # models_repo=repos[i])

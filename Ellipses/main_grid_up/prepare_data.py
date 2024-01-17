@@ -24,9 +24,7 @@ def call_F(xy, mu0, mu1, sigma_x, sigma_y, amplitude):
 
 
 def call_G(xy, alpha, beta):
-    return (
-        alpha * ((xy[0] - 0.5) ** 2 - (xy[1] - 0.5) ** 2) * np.cos(np.pi * beta * xy[1])
-    )
+    return alpha * ((xy[0]) ** 2 - (xy[1]) ** 2) * np.cos(np.pi * beta * xy[1])
 
 
 def call_phi(xy, x_0, y_0, lx, ly, theta):
@@ -193,7 +191,7 @@ def create_FG_numpy(nb_data, nb_vert):
             theta[n][0],
         )
         mmu0, mmu1 = mu0[n][0], mu1[n][0]
-        while eval_phi(mmu0, mmu1, xx_0, yy_0, llx, lly, ttheta) > -0.15:
+        while eval_phi(mmu0, mmu1, xx_0, yy_0, llx, lly, ttheta) > -0.1:
             mu0[n][0] = np.random.uniform(0.2, 0.8, size=[1])[0]
             mu1[n][0] = np.random.uniform(0.2, 0.8, size=[1])[0]
             mmu0, mmu1 = mu0[n][0], mu1[n][0]
