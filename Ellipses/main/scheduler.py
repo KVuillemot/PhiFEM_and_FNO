@@ -3,7 +3,7 @@ from torch import inf
 from torch.optim import Optimizer
 
 
-class ReduceLROnPlateau_perso:
+class LR_Scheduler:
     def __init__(
         self,
         optimizer,

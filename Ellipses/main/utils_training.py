@@ -11,7 +11,7 @@ import seaborn as sns
 import operator
 from functools import reduce
 from losses import Loss
-from scheduler import ReduceLROnPlateau_perso
+from scheduler import LR_Scheduler
 
 seed = 2102
 
@@ -538,7 +538,7 @@ class Agent:
         nb_val_data (int): Number of validation data points.
         model (FNO2d): Neural network model for solving PDEs.
         optimizer (torch.optim.Adam): Optimizer for training the model.
-        scheduler (ReduceLROnPlateau_perso): Learning rate scheduler.
+        scheduler (LR_Scheduler): Learning rate scheduler.
         loss_function (Loss): Loss function for training.
         nb_batch (int): Number of batches in one training epoch.
         test_batch_size (int): Batch size for evaluating losses on a subset of data during training.
@@ -558,10 +558,10 @@ class Agent:
         initial_lr=5e-3,
         n_modes=10,
         width=20,
-        batch_size=64,
+        batch_size=32,
         l2_lambda=1e-3,
-        pad_prop=0.0,
-        pad_mode="one_side_reflect",
+        pad_prop=0.05,
+        pad_mode="reflect",
         nb_layers=4,
         activation="gelu",
     ):
@@ -609,8 +609,9 @@ class Agent:
             nb_layers=self.nb_layers,
             activation=self.activation,
         ).to(self.device)
+        print(f"{count_params(self.model)=}")
         self.optimizer = torch.optim.Adam(self.model.parameters(), self.initial_lr)
-        self.scheduler = ReduceLROnPlateau_perso(
+        self.scheduler = LR_Scheduler(
             self.optimizer,
             patience=20,
             factor=0.7,
@@ -984,95 +985,25 @@ class Agent:
         )
 
         plt.tight_layout()
-
-        if not (os.path.exists("./images")) and save:
-            os.makedirs("./images")
         if save:
-            # plt.savefig(f"./images/losses.png")
             plt.savefig(f"./{models_repo}/losses.png")
-        # plt.show()
+        plt.show()
 
 
 if __name__ == "__main__":
     data = DataLoader(False)
 
-    training_agent = Agent(
-        data,
-        level=0,
-        relative=True,
-        squared=False,
-        initial_lr=5e-3,
-        n_modes=10,
-        width=20,
-        batch_size=32,
-        pad_prop=0.05,
-        pad_mode="reflect",
-        l2_lambda=1e-3,
-    )
+    training_agent = Agent(data)
     print(
         f"(level, relative, squared, initial_lr, n_modes, width, batch_size, l2_lambda, pad_prop, pad_mode) = "
         + f"{(training_agent.level, training_agent.relative, training_agent.squared, training_agent.initial_lr, training_agent.n_modes, training_agent.width, training_agent.batch_size, training_agent.l2_lambda, training_agent.pad_prop, training_agent.pad_mode)} \n"
     )
     nb_epochs = 2000
     start_training = time.time()
-    training_agent.train(nb_epochs, models_repo="./models_l2")
+    training_agent.train(nb_epochs, models_repo="./models")
     end_training = time.time()
     time_training = end_training - start_training
     print(
         f"Total time to train the operator : {time_training:.3f}s. Average time : {time_training/nb_epochs:.3f}s."
     )
-    training_agent.plot_losses(models_repo="./models_l2")  # models_repo=repos[i])
-
-    training_agent = Agent(
-        data,
-        level=1,
-        relative=True,
-        squared=False,
-        initial_lr=5e-3,
-        n_modes=10,
-        width=20,
-        batch_size=32,
-        pad_prop=0.05,
-        pad_mode="reflect",
-        l2_lambda=1e-3,
-    )
-    print(
-        f"(level, relative, squared, initial_lr, n_modes, width, batch_size, l2_lambda, pad_prop, pad_mode) = "
-        + f"{(training_agent.level, training_agent.relative, training_agent.squared, training_agent.initial_lr, training_agent.n_modes, training_agent.width, training_agent.batch_size, training_agent.l2_lambda, training_agent.pad_prop, training_agent.pad_mode)} \n"
-    )
-    nb_epochs = 2000
-    start_training = time.time()
-    training_agent.train(nb_epochs, models_repo="./models_H1")
-    end_training = time.time()
-    time_training = end_training - start_training
-    print(
-        f"Total time to train the operator : {time_training:.3f}s. Average time : {time_training/nb_epochs:.3f}s."
-    )
-    training_agent.plot_losses(models_repo="./models_H1")  # models_repo=repos[i])
-
-    training_agent = Agent(
-        data,
-        level=2,
-        relative=True,
-        squared=False,
-        initial_lr=5e-3,
-        n_modes=10,
-        width=20,
-        batch_size=32,
-        pad_prop=0.05,
-        pad_mode="reflect",
-        l2_lambda=1e-3,
-    )
-    print(
-        f"(level, relative, squared, initial_lr, n_modes, width, batch_size, l2_lambda, pad_prop, pad_mode) = "
-        + f"{(training_agent.level, training_agent.relative, training_agent.squared, training_agent.initial_lr, training_agent.n_modes, training_agent.width, training_agent.batch_size, training_agent.l2_lambda, training_agent.pad_prop, training_agent.pad_mode)} \n"
-    )
-    nb_epochs = 2000
-    start_training = time.time()
-    training_agent.train(nb_epochs, models_repo="./models_H2")
-    end_training = time.time()
-    time_training = end_training - start_training
-    print(
-        f"Total time to train the operator : {time_training:.3f}s. Average time : {time_training/nb_epochs:.3f}s."
-    )
-    training_agent.plot_losses(models_repo="./models_H2")  # models_repo=repos[i])
+    training_agent.plot_losses(models_repo="./models")  # models_repo=repos[i])
