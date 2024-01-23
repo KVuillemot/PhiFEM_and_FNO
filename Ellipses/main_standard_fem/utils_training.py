@@ -11,7 +11,7 @@ import seaborn as sns
 import operator
 from functools import reduce
 from losses import Loss
-from scheduler import ReduceLROnPlateau_perso
+from scheduler import LR_Scheduler
 
 seed = 2102
 
@@ -469,7 +469,7 @@ class Agent:
         nb_val_data (int): Number of validation data points.
         model (FNO2d): Neural network model for solving PDEs.
         optimizer (torch.optim.Adam): Optimizer for training the model.
-        scheduler (ReduceLROnPlateau_perso): Learning rate scheduler.
+        scheduler (LR_Scheduler): Learning rate scheduler.
         loss_function (Loss): Loss function for training.
         nb_batch (int): Number of batches in one training epoch.
         test_batch_size (int): Batch size for evaluating losses on a subset of data during training.
@@ -541,7 +541,7 @@ class Agent:
             activation=self.activation,
         ).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), self.initial_lr)
-        self.scheduler = ReduceLROnPlateau_perso(
+        self.scheduler = LR_Scheduler(
             self.optimizer,
             patience=20,
             factor=0.7,
@@ -926,7 +926,6 @@ class Agent:
 
 if __name__ == "__main__":
     data = DataLoader(False)
-    # {'level': 2, 'relative': True, 'squared': False, 'initial_lr': 0.001, 'n_modes': 25, 'width': 16, 'batch_size': 32, 'l2_lambda': 1e-05, 'pad_prop': 0.05, 'pad_mode': 'constant', 'nb_layers': 4, 'activation': 'gelu', 'essaie': 1}
 
     training_agent = Agent(
         data,
@@ -953,4 +952,4 @@ if __name__ == "__main__":
     print(
         f"Total time to train the operator : {time_training:.3f}s. Average time : {time_training/nb_epochs:.3f}s."
     )
-    training_agent.plot_losses(models_repo="./models_l2")  # models_repo=repos[i])
+    training_agent.plot_losses(models_repo="./models_l2")
