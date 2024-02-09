@@ -9,25 +9,28 @@ The directory `./Generate_figures/` contains two Python files that generate figu
 In `./Ellipses/`, there are 3 directories: 
 - `data/`: it contains all the files that compose a data set of size 1800 to perform a training of the operator. 
 - `main/`: it contains the most important codes. More precisely, 
-    - `change_size_images.ipynb`: to evaluate the performance of a model when changing the size of the input images.
     - `compare_loss_levels.ipynb`: to compare the performance of $\phi$-FEM-FNO different levels of loss function.
     - `compare_methods.ipynb`: to compare the performance of the of $\phi$-FEM-FNO approach with the ones of a standard finite element method and of $\phi$-FEM (error and computation times),
     - `generate_data.py`: generation of a data set, 
     - `losses.py`: used during training, functions to compute the loss, 
+    - `plot_masks.ipynb`: to plot the considered domains for the loss computation, 
     - `plot_results.ipynb`: to check the performance of a training on the validation sample and a test sample, 
     - `prepare_data.py`: all the functions needed to generate a data set, 
     - `scheduler.py`: implementation of the learning rate scheduler, 
-    - `training.py`: implementation of the FNO and of the training loop, 
-    - `utils.py`,
+    - `training.ipynb`: to run a training,
     - `utils_compare_methods.py`: implementation of a finite element method and of $\phi$-FEM.
-
+    - `utils_training.py`: implementation of the FNO and of the training loop, 
+    - `utils.py`: some utilities functions,
+    
 - `main_standard_fem/`: contains the codes to generate a dataset and train a FNO using standard-FEM solutions, interpolated on a cartesian grid of resolution $64 \times 64$. 
 
-The directory `./Random_shapes` is composed of the same files, adapted to the test case of random complex shapes. In addition, it contains the file `generate_domains.py` used to create the complex random domains. 
+-  `main_geo_FNO`: contains all the codes to implement a Geo-FNO (see [https://github.com/neuraloperator/Geo-FNO](https://github.com/neuraloperator/Geo-FNO) and [https://arxiv.org/abs/2207.05209](https://arxiv.org/abs/2207.05209)).
 
-The data set of size 8733, used to train the operator for the case of random shapes is available at : [https://figshare.com/articles/dataset/Data_set_/23905671](https://figshare.com/articles/dataset/Data_set_/23905671). To use it, just download all and place the files in the directory `./Random_shapes/data_8733/`.
+The directory `./Random_shapes` is composed of the same files (only the $\phi$-FEM-FNO implementation), adapted to the case of random complex shapes. In addition, it contains the file `generate_domains.py` used to create the complex random domains. 
 
-Moreover, in the `main` folders, we provide the best state of the parameters for each model. 
+The entire dataset is available in `./Random_shapes/data`, and the reduced one used for training in `./Random_shapes/data_reduced`.
+
+Moreover, in all the `main` folders, we provide the best states of the parameters for each models. 
 
 To execute these codes, you will need several packages : 
 [*FEniCS*](https://fenicsproject.org/),
