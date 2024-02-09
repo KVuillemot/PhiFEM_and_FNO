@@ -603,7 +603,7 @@ class Agent:
             loss.backward()
             self.optimizer.step()
             loss_i += loss / self.batch_size
-        self.losses.append(loss / self.nb_batch)
+        self.losses.append(loss_i / self.nb_batch)
 
     def validate(self):
         """
@@ -929,7 +929,7 @@ if __name__ == "__main__":
 
     training_agent = Agent(
         data,
-        level=0,
+        level=2,
         relative=True,
         squared=False,
         initial_lr=5e-3,
@@ -946,10 +946,10 @@ if __name__ == "__main__":
     )
     nb_epochs = 2000
     start_training = time.time()
-    training_agent.train(nb_epochs, models_repo="./models_l2")
+    training_agent.train(nb_epochs, models_repo="./models_H2")
     end_training = time.time()
     time_training = end_training - start_training
     print(
         f"Total time to train the operator : {time_training:.3f}s. Average time : {time_training/nb_epochs:.3f}s."
     )
-    training_agent.plot_losses(models_repo="./models_l2")
+    training_agent.plot_losses(models_repo="./models_H2")
