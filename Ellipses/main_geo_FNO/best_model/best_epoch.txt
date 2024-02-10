@@ -1,4 +1,0 @@
-best_epoch = 1117 
-loss = 0.035264097849528 
-loss = 3.53e-02 
-{'epoch': 1117, 'loss_T': '0.01', 'loss_0_T': '0.01', 'loss_1_T': 'nan', 'loss_2_T': 'nan', 'loss_V': '0.04', 'loss_0_V': '0.04', 'loss_1_V': 'nan', 'loss_2_V': 'nan'} 

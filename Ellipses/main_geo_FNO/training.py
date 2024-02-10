@@ -253,8 +253,8 @@ class FNO2d(nn.Module):
         in_channels,
         out_channels,
         is_mesh=True,
-        s1=40,
-        s2=40,
+        s1=64,
+        s2=64,
     ):
         super(FNO2d, self).__init__()
         self.modes1 = modes1
