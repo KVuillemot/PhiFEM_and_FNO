@@ -553,7 +553,6 @@ class Agent:
         self.test_batch_size = 300
         if self.test_batch_size > self.X_val.shape[0]:
             self.test_batch_size = self.X_val.shape[0]
-        self.losses = []
         self.losses_dict = []
         self.losses_array = []
         self.nb_train_epochs = 0
@@ -577,7 +576,6 @@ class Agent:
         Y = Y_train[rand_i]
         X_denormed = X_train[rand_i]
         self.model.train()
-        loss_i = 0.0
         for i in range(self.nb_batch):
             sli = slice(i * self.batch_size, (i + 1) * self.batch_size)
             x, y_true = X[sli], Y[sli]
@@ -602,8 +600,6 @@ class Agent:
             loss = loss + L2_term * self.l2_lambda
             loss.backward()
             self.optimizer.step()
-            loss_i += loss / self.batch_size
-        self.losses.append(loss_i / self.nb_batch)
 
     def validate(self):
         """

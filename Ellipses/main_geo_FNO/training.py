@@ -459,7 +459,6 @@ class Agent:
         self.loss_function = LpLoss(size_average=False)
         self.nb_batch = nb_data_train // self.batch_size
         self.test_batch_size = self.X_val.shape[0]
-        self.losses = []
         self.losses_dict = []
         self.losses_array = []
         self.nb_train_epochs = 0
@@ -474,7 +473,6 @@ class Agent:
         Y = Y_train[rand_i]
         self.model.train()
         self.model_iphi.train()
-        loss_i = 0.0
         for i in range(self.nb_batch):
             sli = slice(i * self.batch_size, (i + 1) * self.batch_size)
             x, y_true = X[sli], Y[sli]
@@ -487,8 +485,6 @@ class Agent:
             loss.backward()
             self.optimizer_fno.step()
             self.optimizer_iphi.step()
-            loss_i += loss.item() / self.batch_size
-        self.losses.append(loss_i / self.nb_batch)
 
     def validate(self):
         # x, y_true = self.X_val, self.Y_val
