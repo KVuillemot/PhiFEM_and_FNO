@@ -76,7 +76,7 @@ pip install numpy matplotlib seaborn pandas vedo
 ```
 
 
-Finally, if you want to generate new shapes using level-set functions and compute the error of the FNO prediction, you will need to perform few more installations to create standard meshes. These installations are detailed in the file `install_and_use_mmg.md`. 
+Finally, if you want to generate new shapes using level-set functions and compute the error of the FNO prediction, you will need to perform few more installations to create standard meshes. These installations are detailed in the file [`install_and_use_mmg.md`](https://github.com/KVuillemot/PhiFEM_and_FNO/blob/main/install_and_use_mmg.md). 
 
 
 Remark : note that some codes need many resources to be used. Everything can be executed without a GPU but it may take mych time to run. Moreover, some of the codes need more than 10Gb of RAM to be executed. 
