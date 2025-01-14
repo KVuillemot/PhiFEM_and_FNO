@@ -59,15 +59,13 @@ First check the installed drivers:
 nvidia-smi
 ```
 
-If the result of nvidia-smi is not Cuda 11.7, you can either install another driver or create a conda environment. 
-
 For that, use the following (see [*pytorch*](https://pytorch.org/get-started/previous-versions/)) : 
 
 ```bash 
 conda create --name phi_fem_fno python=3.12.6
 conda activate phi_fem_fno 
 conda install -c conda-forge fenics-dolfinx==0.8.0 mpich pyvista
-conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia (#11.8 for example)
+conda install pytorch torchvision torchaudio pytorch-cuda=11.XXX -c pytorch -c nvidia (#11.8 for example, see the result of nvidia-smi)
 pip install numpy matplotlib seaborn pandas scipy
 [sudo] apt install python3-gmsh
 pip install pygmsh
