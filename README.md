@@ -2,7 +2,7 @@
 
 **Authors: Michel Duprez, Vanessa Lleras, Alexei Lozinski, Vincent Vigon, and Killian Vuillemot**
 
-This repository contains all codes to reproduce results of the paper "$\varphi$-FEM-FNO: a new approach to train a Neural Operator as a fast PDE solver for variable geometries", in collaboration with Michel Duprez, Vanessa Lleras, Alexei Lozinski, and Vincent Vigon. 
+This repository contains all codes to reproduce results of the paper " $\varphi$-FEM-FNO: a new approach to train a Neural Operator as a fast PDE solver for variable geometries", in collaboration with Michel Duprez, Vanessa Lleras, Alexei Lozinski, and Vincent Vigon. 
 
 The directory `./Generate_figures/` contains three Python files that generate figures used in the paper. The other directories contain all the codes for the numerical test cases. They solve the Poisson equation with non-homogeneous Dirichlet boundary conditions on random parameterized ellipses (`./Ellipses/`) or complex random shapes defined by Gaussian functions (`./Complex_shapes/`) and non-linear elasticity equation on rectangles plates with 5 circular holes (`./Plate/`). 
 
