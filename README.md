@@ -4,7 +4,7 @@
 
 This repository contains all codes to reproduce results of the paper "$\varphi$-FEM-FNO: a new approach to train a Neural Operator as a fast PDE solver for variable geometries", in collaboration with Michel Duprez, Vanessa Lleras, Alexei Lozinski, and Vincent Vigon. 
 
-The directory `./Generate_figures/` contains three Python files that generate figures used in the paper. The other directories contain all the codes for the numerical test cases. They solve the Poisson equation with non-homogeneous Dirichlet boundary conditions on random parameterized ellipses (`./Ellipses/`) or complex random shapes defined by Gaussian functions (`./Complex_shapes/`) and non-linear elasticity equation on rectangles plates with 5 circular holes (`./Plates/`). 
+The directory `./Generate_figures/` contains three Python files that generate figures used in the paper. The other directories contain all the codes for the numerical test cases. They solve the Poisson equation with non-homogeneous Dirichlet boundary conditions on random parameterized ellipses (`./Ellipses/`) or complex random shapes defined by Gaussian functions (`./Complex_shapes/`) and non-linear elasticity equation on rectangles plates with 5 circular holes (`./Plate/`). 
 
 In `./Ellipses/`, there are several directories: 
 - `data/`, `data_convergence_fems`, `data_test`, `data_test_phi_fem_2500`: they all contain the files the data sets used in the first test case of the paper. 
@@ -25,7 +25,7 @@ All folders are structured in the same way:
 - `prepare_data.py`: all the functions needed to generate a data set, 
 - `scheduler.py`: implementation of the learning rate scheduler, 
 - `training.ipynb`: to run a training,
-- `utils_compare_methods.py`: implementation of a finite element method and of $\phi$-FEM.
+- `utils_compare_methods.py`: implementation of a finite element method and of $\varphi$-FEM.
 - `utils_plot.py`: some functions to help with plotting results, 
 - `utils_training.py`: implementation of the model and training loop, 
 - `utils.py`: some utilities functions,
@@ -33,9 +33,9 @@ All folders are structured in the same way:
 
 The directory `./Complex_shapes` is composed of the same files except that only $\varphi$-FEM-FNO and Standard-FEM-FNO are implemented, adapted to the case of random complex shapes. In addition, it contains the file `compute_hausdorrf.py` used to illustrate the correlation between error and Hausdorff distance. 
 
-Moreover, in all the `main` folders, we provide the best states of the parameters for each models. 
+Finally, the directory `./Plate` is composed of the same files for $\varphi$-FEM-FNO only, to implement the third test case of the paper. 
 
-Once executed, the results of the codes are stored in folders `./test_case/main/results/` and the created outputs in `test_case/main/images/`. 
+In all the `./test_case/main/METHOD` folders, we provide the best states of the parameters for each models. Once executed, the results of the codes are stored in folders `./test_case/main/results/` and the created outputs in `test_case/main/images/`. 
 
 
 To execute these codes, you will need several packages : 
