@@ -1,4 +1,0 @@
-best_epoch = 1550 
-loss = 0.022066162427266438 
-loss = 2.21e-02 
-{'epoch': 1550, 'loss_T': '0.01', 'loss_0_T': '0.01', 'loss_1_T': 'nan', 'loss_2_T': 'nan', 'loss_V': '0.02', 'loss_0_V': '0.02', 'loss_1_V': 'nan', 'loss_2_V': 'nan'} 

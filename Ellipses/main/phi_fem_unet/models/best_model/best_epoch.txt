@@ -1,0 +1,5 @@
+(level, relative, squared, initial_lr, n_modes, width, batch_size, l2_lambda, pad_prop, pad_mode) = (1, True, False, 0.0005, 10, 20, 32, 1e-07, 0.05, 'reflect') 
+best_epoch = 1834 
+loss = 0.0006015329854562879 
+loss = 6.02e-04 
+{'epoch': 1834, 'loss_T': '1.13e-04', 'rel-L2_T': '4.75e-03', 'rel-h1_T': '6.07e-03', 'loss_V': '6.02e-04', 'rel-L2_V': '9.96e-03', 'rel-h1_V': '1.17e-02'} 

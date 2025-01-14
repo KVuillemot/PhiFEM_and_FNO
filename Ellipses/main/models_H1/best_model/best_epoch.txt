@@ -1,5 +1,0 @@
-(level, relative, squared, initial_lr, n_modes, width, batch_size, l2_lambda, pad_prop, pad_mode) = (1, True, False, 0.005, 10, 20, 32, 0.001, 0.05, 'reflect') 
-best_epoch = 1981 
-loss = 0.00386796236038208 
-loss = 3.87e-03 
-{'epoch': 1981, 'loss_T': '2.76e-03', 'loss_0_T': '8.07e-04', 'loss_1_T': '1.11e-03', 'loss_2_T': '2.78e-03', 'loss_V': '3.87e-03', 'loss_0_V': '1.48e-03', 'loss_1_V': '1.91e-03', 'loss_2_V': '3.89e-03'} 

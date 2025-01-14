@@ -32,11 +32,8 @@ inside = mshr.CSGRotation(
 class phi_expr(df.UserExpression):
     def eval(self, value, x):
         value[0] = -1.0 + (
-            ((x[0] - x_0) * np.cos(theta) + (x[1] - y_0) * np.sin(theta)) ** 2
-            / lx**2
-            + ((x[0] - x_0) * np.sin(theta) - (x[1] - y_0) * np.cos(theta))
-            ** 2
-            / ly**2
+            ((x[0] - x_0) * np.cos(theta) + (x[1] - y_0) * np.sin(theta)) ** 2 / lx**2
+            + ((x[0] - x_0) * np.sin(theta) - (x[1] - y_0) * np.cos(theta)) ** 2 / ly**2
         )
 
     def value_shape(self):
@@ -45,18 +42,14 @@ class phi_expr(df.UserExpression):
 
 if Plot == "domain":
     mesh = mshr.generate_mesh(domain, 300)
-    background_mesh = df.RectangleMesh(
-        df.Point(0.0, 0.0), df.Point(1.0, 1.0), 16, 16
-    )
+    background_mesh = df.RectangleMesh(df.Point(0.0, 0.0), df.Point(1.0, 1.0), 16, 16)
     vdf.plot(background_mesh, c="white", lw=0.0, interactive=False, axes=0)
     vdf.plot(mesh, c="gray", axes=0, lw=0, add=True, interactive=True)
     vedo.close()
 
 if Plot == "cells_dirichlet":
     degPhi = 2
-    background_mesh = df.RectangleMesh(
-        df.Point(0.0, 0.0), df.Point(1.0, 1.0), 16, 16
-    )
+    background_mesh = df.RectangleMesh(df.Point(0.0, 0.0), df.Point(1.0, 1.0), 16, 16)
     V_phi = df.FunctionSpace(background_mesh, "CG", degPhi)
     phi = phi_expr(element=V_phi.ufl_element())
     phi = df.interpolate(phi, V_phi)
@@ -124,9 +117,7 @@ if Plot == "cells_dirichlet":
         lw=2.8,
         interactive=False,
     )
-    plt += vdf.plot(
-        ellipse, c="red4", lw=0, axes=0, add=True, interactive=True
-    )
+    plt += vdf.plot(ellipse, c="red4", lw=0, axes=0, add=True, interactive=True)
 
     plt += vdf.plot(
         shapes.Arrow2D((0.49, 0.86, 0.0), (0.39, 0.78, 0)),
@@ -154,18 +145,16 @@ if Plot == "cells_dirichlet":
     actors = plt.actors[:]
 
     Gamma_D = r"\Gamma"
-    formula_1 = Latex(Gamma_D, c="r", s=0.25, usetex=True, res=60).pos(
-        0.60, 0.68, 0
-    )
+    formula_1 = Latex(Gamma_D, c="r", s=0.25, usetex=True, res=60).pos(0.60, 0.68, 0)
 
     F_h_D = r"E \in \mathcal{F}_h^{\Gamma}"
     formula_2 = vedo.Latex(F_h_D, c="k", s=0.25, usetex=True, res=60).pos(
         -0.10, -0.11, 0
     )
     Omh_Gamma_D = r"\Omega_h^{\Gamma}"
-    formula_3 = vedo.Latex(
-        Omh_Gamma_D, c="gray3", s=0.25, usetex=True, res=60
-    ).pos(0.31, 0.68, 0)
+    formula_3 = vedo.Latex(Omh_Gamma_D, c="gray3", s=0.25, usetex=True, res=60).pos(
+        0.31, 0.68, 0
+    )
 
     T_h_O = r"\mathcal{T}_h^{\mathcal{O}}"
     formula_4 = vedo.Latex(T_h_O, c="k", s=0.25, usetex=True, res=60).pos(
@@ -178,15 +167,11 @@ if Plot == "cells_dirichlet":
     )
 
     partial_omega = r"E \in \partial \Omega_h"
-    formula_6 = vedo.Latex(
-        partial_omega, c="k", s=0.25, usetex=True, res=60
-    ).pos(0.45, -0.11, 0)
+    formula_6 = vedo.Latex(partial_omega, c="k", s=0.25, usetex=True, res=60).pos(
+        0.45, -0.11, 0
+    )
 
-    actors.append(
-        [formula_1, formula_2, formula_3, formula_4, formula_5, formula_6]
-    )
-    vedo.show(
-        actors, formula_1, formula_2, formula_3, formula_4, formula_5, axes=0
-    )
+    actors.append([formula_1, formula_2, formula_3, formula_4, formula_5, formula_6])
+    vedo.show(actors, formula_1, formula_2, formula_3, formula_4, formula_5, axes=0)
 
     vedo.close()

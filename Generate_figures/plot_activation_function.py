@@ -1,36 +1,39 @@
 import numpy as np
+import torch
+
 import matplotlib.pyplot as plt
-import random
-import os
 import seaborn as sns
 
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-import tensorflow as tf
-
-seed = 2023
-random.seed(seed)
-np.random.seed(seed)
-tf.random.set_seed(seed)
-tf.experimental.numpy.random.seed(seed)
-os.environ["TF_CUDNN_DETERMINISTIC"] = "1"
-os.environ["TF_DETERMINISTIC_OPS"] = "1"
-# Set a fixed value for the hash seed
-os.environ["PYTHONHASHSEED"] = str(seed)
-
 sns.set_theme()
-sns.set_context("paper")
+sns.set_context("talk")
 sns.set(rc={"xtick.bottom": True, "ytick.left": True})
 colors = sns.color_palette("mako").as_hex()
 my_cmap = sns.color_palette("viridis", as_cmap=True)
 
 
-x = np.linspace(-4.0, 4.0, 1000)
-x = tf.constant(x, dtype=tf.float32)
-y2 = tf.keras.activations.gelu(x).numpy()
+xx = np.linspace(-3, 3, 200)
 
-plt.figure(figsize=(6, 3))
-plt.plot(x, y2, label="$gelu(x)$")
+plt.figure(figsize=(4, 3))
+plt.plot(xx, torch.nn.functional.relu(torch.tensor(xx)), label=r"$RELU(x)$")
 plt.legend()
 plt.tight_layout()
-plt.savefig("./activation_functions.png")
+plt.savefig("relu.pdf")
 plt.show()
+
+plt.figure(figsize=(4, 3))
+plt.plot(xx, torch.nn.functional.gelu(torch.tensor(xx)), label=r"$GELU(x)$")
+plt.legend()
+plt.tight_layout()
+plt.savefig("gelu.pdf")
+plt.show()
+
+
+# plt.subplot(3, 1, 2)
+# plt.plot(xx, torch.nn.functional.gelu(torch.tensor(xx)), label=r"$GELU(x)$")
+# plt.legend()
+# plt.subplot(3, 1, 3)
+# plt.plot(xx, torch.sin(torch.tensor(xx)), label=r"$\sin(x)$")
+# plt.legend()
+# plt.tight_layout()
+# plt.savefig("activation_functions.pdf")
+# plt.show()
