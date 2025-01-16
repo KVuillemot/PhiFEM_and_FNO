@@ -2,7 +2,7 @@
 
 **Authors: Michel Duprez, Vanessa Lleras, Alexei Lozinski, Vincent Vigon, and Killian Vuillemot**
 
-This repository contains all codes to reproduce results of the paper "$\varphi$-FEM-FNO: a new approach to train a Neural Operator as a fast PDE solver for variable geometries", in collaboration with Michel Duprez, Vanessa Lleras, Alexei Lozinski, and Vincent Vigon. 
+This repository contains all codes to reproduce results of the paper " $\varphi$-FEM-FNO: a new approach to train a Neural Operator as a fast PDE solver for variable geometries", in collaboration with Michel Duprez, Vanessa Lleras, Alexei Lozinski, and Vincent Vigon. 
 
 The directory `./Generate_figures/` contains three Python files that generate figures used in the paper. The other directories contain all the codes for the numerical test cases. They solve the Poisson equation with non-homogeneous Dirichlet boundary conditions on random parameterized ellipses (`./Ellipses/`) or complex random shapes defined by Gaussian functions (`./Complex_shapes/`) and non-linear elasticity equation on rectangles plates with 5 circular holes (`./Plate/`). 
 
@@ -59,15 +59,13 @@ First check the installed drivers:
 nvidia-smi
 ```
 
-If the result of nvidia-smi is not Cuda 11.7, you can either install another driver or create a conda environment. 
-
 For that, use the following (see [*pytorch*](https://pytorch.org/get-started/previous-versions/)) : 
 
 ```bash 
 conda create --name phi_fem_fno python=3.12.6
 conda activate phi_fem_fno 
 conda install -c conda-forge fenics-dolfinx==0.8.0 mpich pyvista
-conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia (#11.8 for example)
+conda install pytorch torchvision torchaudio pytorch-cuda=11.XXX -c pytorch -c nvidia (#11.8 for example, see the result of nvidia-smi)
 pip install numpy matplotlib seaborn pandas scipy
 [sudo] apt install python3-gmsh
 pip install pygmsh
